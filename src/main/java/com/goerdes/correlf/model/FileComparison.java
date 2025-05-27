@@ -1,8 +1,6 @@
 package com.goerdes.correlf.model;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 /**
  * Represents the result of comparing two files, providing a similarity score
@@ -10,6 +8,8 @@ import lombok.Setter;
  */
 @Getter
 @RequiredArgsConstructor
+@Builder
+@AllArgsConstructor
 public class FileComparison {
 
     public static final String HIGH = "high";
