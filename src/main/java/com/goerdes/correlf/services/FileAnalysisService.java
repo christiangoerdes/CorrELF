@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 import static com.goerdes.correlf.handler.ElfHandler.createEntity;
 import static com.goerdes.correlf.handler.ElfHandler.fromMultipart;
-import static com.goerdes.correlf.model.FileComparison.HIGH;
 
 /**
  * Service responsible for analyzing uploaded ELF files, comparing them to existing
