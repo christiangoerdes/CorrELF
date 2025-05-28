@@ -15,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.goerdes.correlf.handler.ElfHandler.createEntity;
@@ -46,19 +45,33 @@ public class FileAnalysisService {
 
         ElfWrapper elfWrapper = toElfWrapper(upload);
 
-        // Check if the file already exists
-        Optional<FileEntity> existing = fileRepo.findBySha256(elfWrapper.getSha256());
-        if (existing.isPresent()) {
-            return List.of(getFileMatch(existing.get()));
+        // find all files with the same hash
+        List<FileEntity> existing = fileRepo.findBySha256(elfWrapper.getSha256());
+
+        if (!existing.isEmpty()) {
+
+            // if none of the existing entries has exactly the same filename, save the new one
+            if (existing.stream()
+                    .map(FileEntity::getFilename)
+                    .noneMatch(elfWrapper.getFilename()::equals)
+            ) {
+                fileRepo.save(createEntity(elfWrapper));
+            }
+
+            return existing.stream()
+                    .map(this::getFileMatch)
+                    .collect(Collectors.toList());
         }
 
-        FileEntity newEntity = ElfHandler.createEntity(elfWrapper);
+        FileEntity newEntity = createEntity(elfWrapper);
 
+        // compare to all stored files
         List<FileComparison> comparisons = fileRepo.findAll().stream()
                 .map(other -> (FileComparison) comparisonService.compareFiles(newEntity, other))
                 .collect(Collectors.toList());
 
         fileRepo.save(newEntity);
+
         return comparisons;
     }
 
@@ -87,7 +100,9 @@ public class FileAnalysisService {
         }
     }
 
-    /** Parses the upload into ElfWrapper, rethrowing IO as a FileProcessingException. */
+    /**
+     * Parses the upload into ElfWrapper, rethrowing IO as a FileProcessingException.
+     */
     private ElfWrapper toElfWrapper(MultipartFile upload) {
         try {
             return ElfHandler.fromMultipart(upload);
@@ -97,9 +112,9 @@ public class FileAnalysisService {
         }
     }
 
-    private static TwoFileComparison getFileMatch(FileEntity sha256entity) {
+    private TwoFileComparison getFileMatch(FileEntity matchingEntity) {
         return new TwoFileComparison() {{
-            setFileName(sha256entity.getFilename());
+            setFileName(matchingEntity.getFilename());
             setSimilarityScore(1);
         }};
     }
