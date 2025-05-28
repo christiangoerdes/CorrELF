@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -60,8 +61,24 @@ public class FileController {
         return ResponseEntity.ok(fileAnalysisService.compare(file1, file2));
     }
 
+    /**
+     * Accepts a ZIP archive containing multiple binaries, extracts each entry,
+     * analyzes it (parses, computes hash, generates representations) and
+     * persists it to the database. No comparison results are returned.
+     *
+     * @param archive the ZIP file with binaries to ingest
+     * @return HTTP 204 No Content on success
+     * @throws IOException if reading or extracting the ZIP entries fails
+     */
+    @PostMapping("/upload-zip")
+    public ResponseEntity<Void> uploadZipArchive(@RequestParam("file") MultipartFile archive) throws IOException {
+        fileAnalysisService.importZipArchive(archive);
+        return ResponseEntity.noContent().build();
+    }
+
     @ExceptionHandler(FileProcessingException.class)
     public ResponseEntity<String> onError(FileProcessingException ex) {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
+
 }

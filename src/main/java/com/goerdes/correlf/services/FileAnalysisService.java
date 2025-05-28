@@ -10,11 +10,15 @@ import com.goerdes.correlf.model.TwoFileComparison;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import static com.goerdes.correlf.handler.ElfHandler.createEntity;
 import static com.goerdes.correlf.handler.ElfHandler.fromMultipart;
@@ -69,9 +73,11 @@ public class FileAnalysisService {
             FileEntity e2 = createEntity(fromMultipart(file2));
 
             if (e1.getSha256().equals(e2.getSha256())) {
-                TwoFileComparison match = getFileMatch(e1);
-                match.setSecondFileName(e2.getFilename());
-                return match;
+                return new TwoFileComparison() {{
+                    setFileName(e1.getFilename());
+                    setSecondFileName(e2.getFilename());
+                    setSimilarityScore(1);
+                }};
             }
             TwoFileComparison fileComparison = comparisonService.compareFiles(e1, e2);
             fileComparison.setSecondFileName(e1.getFilename());
@@ -79,6 +85,18 @@ public class FileAnalysisService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Parses the given uploaded ELF file, constructs its corresponding
+     * FileEntity (including SHA-256 and extracted representations), and
+     * persists it to the database.
+     *
+     * @param file the ELF file received as a MultipartFile
+     * @throws FileProcessingException if parsing or representation extraction fails
+     */
+    public void addToDB(MultipartFile file) {
+        fileRepo.save(createEntity(toElfWrapper(file)));
     }
 
     /**
@@ -93,10 +111,42 @@ public class FileAnalysisService {
         }
     }
 
-    private TwoFileComparison getFileMatch(FileEntity matchingEntity) {
-        return new TwoFileComparison() {{
-            setFileName(matchingEntity.getFilename());
-            setSimilarityScore(1);
-        }};
+    /**
+     * Imports all ELF binaries contained in the given ZIP archive into the database.
+     * <p>
+     * Each non-directory entry is read into memory, wrapped in a
+     * {@code ByteArrayMultipartFile}, and persisted via {@link #addToDB(MultipartFile)}.
+     * Errors for individual entries are logged but do not interrupt processing
+     * of the remaining entries.
+     *
+     * @param archive the ZIP file containing one or more ELF binaries
+     * @throws IOException if an I/O error occurs while reading the archive
+     */
+    public void importZipArchive(MultipartFile archive) throws IOException {
+        Objects.requireNonNull(archive, "Archive must not be null");
+
+        try (ZipInputStream zis = new ZipInputStream(archive.getInputStream())) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (!entry.isDirectory()) {
+                    String entryName = entry.getName();
+
+                    MultipartFile filePart = new MockMultipartFile(
+                            entryName,
+                            entryName,
+                            "application/octet-stream",
+                            zis.readAllBytes()
+                    );
+
+                    try {
+                        addToDB(filePart);
+                    } catch (FileProcessingException e) {
+                        log.error("Failed to process entry '{}': {}", entryName, e.getMessage());
+                    }
+                }
+                zis.closeEntry();
+            }
+        }
     }
+
 }

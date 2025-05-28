@@ -28,7 +28,7 @@ public class FileEntity {
     @Column(nullable = false)
     String filename;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String sha256;
 
     @OneToMany(
