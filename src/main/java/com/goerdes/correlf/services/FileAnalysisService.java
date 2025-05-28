@@ -42,37 +42,19 @@ public class FileAnalysisService {
      * @throws FileProcessingException if parsing or persistence fails
      */
     public List<FileComparison> analyze(MultipartFile upload) {
-
         ElfWrapper elfWrapper = toElfWrapper(upload);
+        List<FileEntity> stored = fileRepo.findAll();
 
-        // find all files with the same hash
-        List<FileEntity> existing = fileRepo.findBySha256(elfWrapper.getSha256());
-
-        if (!existing.isEmpty()) {
-
-            // if none of the existing entries has exactly the same filename, save the new one
-            if (existing.stream()
-                    .map(FileEntity::getFilename)
-                    .noneMatch(elfWrapper.getFilename()::equals)
-            ) {
-                fileRepo.save(createEntity(elfWrapper));
-            }
-
-            return existing.stream()
-                    .map(this::getFileMatch)
-                    .collect(Collectors.toList());
+        if (fileRepo.findBySha256(elfWrapper.getSha256()).stream()
+                .map(FileEntity::getFilename)
+                .noneMatch(elfWrapper.getFilename()::equals)
+        ) {
+            fileRepo.save(createEntity(elfWrapper));
         }
 
-        FileEntity newEntity = createEntity(elfWrapper);
-
-        // compare to all stored files
-        List<FileComparison> comparisons = fileRepo.findAll().stream()
-                .map(other -> (FileComparison) comparisonService.compareFiles(newEntity, other))
-                .collect(Collectors.toList());
-
-        fileRepo.save(newEntity);
-
-        return comparisons;
+        return stored.stream()
+                .map(other -> (FileComparison) comparisonService.compareFiles(createEntity(elfWrapper), other))
+                .toList();
     }
 
     /**
