@@ -6,11 +6,19 @@ These scripts generate a collection of Buildroot builds with varied configuratio
 
 ```
 ./
-├── buildroot/                 # Clone the buildroot repo here (https://github.com/buildroot/buildroot.git)
+├── buildroot/                  # cloned Buildroot repo
 ├── scripts/
-│   ├── build.sh               # Generates a random fragment, random BusyBox config, runs a build, and collects artifacts
-│   └── run_builds.sh          # Wrapper to execute build.sh multiple times, even if some builds fail
-└── README.md                  
+│   ├── build.sh                # single randomized build + artifact collection
+│   ├── run_builds.sh           # repeat build.sh N times
+│   └── collect_elfs.sh         # collect all elf files, add fragment-name and zip it
+├── builds/                     # each run’s output lands here
+│   └── <fragment-name>/        # one folder per build
+│       ├── rootfs.tar
+│       ├── elf_bins/           # extracted ELF binaries
+│       ├── buildroot.config    
+│       ├── <fragment-name>.config  
+│       └── busybox.config      
+└── README.md                              
 ```
 
 ### Usage
