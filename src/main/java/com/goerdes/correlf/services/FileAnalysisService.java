@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -44,6 +45,7 @@ public class FileAnalysisService {
      * @return list of comparisons against each stored file
      * @throws FileProcessingException if parsing or persistence fails
      */
+    @Transactional(readOnly = true)
     public List<FileComparison> analyze(MultipartFile upload) {
         ElfWrapper elfWrapper = toElfWrapper(upload);
         List<FileEntity> stored = fileRepo.findAll();
@@ -67,6 +69,7 @@ public class FileAnalysisService {
      * @param file2 the second file to compare
      * @return a {@link TwoFileComparison} including both filenames, similarity score, and rating
      */
+    @Transactional(readOnly = true)
     public TwoFileComparison compare(MultipartFile file1, MultipartFile file2) {
         try {
             FileEntity e1 = createEntity(fromMultipart(file1));

@@ -4,3 +4,6 @@
 /test/
 /data/builds.zip
 /data/all_elfs.zip
+/src/test/resources/all_elfs.zip
+/src/test/resources/busybox
+/src/test/resources/dropbear
