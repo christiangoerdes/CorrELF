@@ -71,7 +71,7 @@ public class FileComparisonIntegrationTest {
         double pctLow    = total > 0 ? 100.0 * low    / total : 0;
 
         System.out.printf(
-                "%s overall: total=%d, high=%d (%.2f%%), medium=%d (%.2f%%), low=%d (%.2f%%)",
+                "%s overall: total=%d, high=%d (%.2f%%), medium=%d (%.2f%%), low=%d (%.2f%%) \n",
                 label, total, high, pctHigh, medium, pctMedium, low, pctLow
         );
 
@@ -89,7 +89,7 @@ public class FileComparisonIntegrationTest {
         double famPctLow    = famTotal > 0 ? 100.0 * famLow    / famTotal : 0;
 
         System.out.printf(
-                "%s family: total=%d, high=%d (%.2f%%), medium=%d (%.2f%%), low=%d (%.2f%%), high+medium=%d%n",
+                "%s family: total=%d, high=%d (%.2f%%), medium=%d (%.2f%%), low=%d (%.2f%%), high+medium=%d%n \n",
                 label, famTotal, famHigh, famPctHigh, famMedium, famPctMedium, famLow, famPctLow, (famHigh + famMedium)
         );
 
