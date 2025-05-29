@@ -15,19 +15,18 @@ public class FileComparisonService {
      * a FileComparison for the target.
      *
      * @param referenceFile the original file entity to compare from
-     * @param targetFile the file entity to compare against the reference
+     * @param targetFile    the file entity to compare against the reference
      * @return a FileComparison describing the similarity result for the target file
      */
     public TwoFileComparison compareFiles(FileEntity referenceFile, FileEntity targetFile) {
 
-        double[] referenceFileHeader = unpackBytesToDoubles(
-                referenceFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
+        double similarity = cosineSimilarity(
+                unpackBytesToDoubles(
+                        referenceFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
+                ), unpackBytesToDoubles(
+                        targetFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
+                )
         );
-        double[] targetFileHeader = unpackBytesToDoubles(
-                targetFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
-        );
-
-        double similarity = cosineSimilarity(referenceFileHeader, targetFileHeader);
 
         return new TwoFileComparison() {{
             setFileName(targetFile.getFilename());
@@ -38,7 +37,7 @@ public class FileComparisonService {
 
     /**
      * Computes the cosine similarity between two feature vectors:
-     *   cosine = (A·B) / (||A|| * ||B||)
+     * cosine = (A·B) / (||A|| * ||B||)
      *
      * @param a first feature vector
      * @param b second feature vector
@@ -57,7 +56,7 @@ public class FileComparisonService {
         double normA = 0.0;
         double normB = 0.0;
         for (int i = 0; i < a.length; i++) {
-            dot   += a[i] * b[i];
+            dot += a[i] * b[i];
             normA += a[i] * a[i];
             normB += b[i] * b[i];
         }

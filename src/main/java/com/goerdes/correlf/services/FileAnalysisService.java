@@ -3,7 +3,6 @@ package com.goerdes.correlf.services;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.exception.FileProcessingException;
-import com.goerdes.correlf.handler.ElfHandler;
 import com.goerdes.correlf.model.ElfWrapper;
 import com.goerdes.correlf.model.FileComparison;
 import com.goerdes.correlf.model.TwoFileComparison;
@@ -82,9 +81,7 @@ public class FileAnalysisService {
                     setSimilarityScore(1);
                 }};
             }
-            TwoFileComparison fileComparison = comparisonService.compareFiles(e1, e2);
-            fileComparison.setSecondFileName(e1.getFilename());
-            return fileComparison;
+            return comparisonService.compareFiles(e1, e2);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -107,10 +104,9 @@ public class FileAnalysisService {
      */
     private ElfWrapper toElfWrapper(MultipartFile upload) {
         try {
-            return ElfHandler.fromMultipart(upload);
+            return fromMultipart(upload);
         } catch (IOException e) {
-            String name = upload.getOriginalFilename();
-            throw new FileProcessingException("Failed to parse ELF from " + (name != null ? name : "<unnamed>"), e);
+            throw new FileProcessingException("Failed to parse ELF from " + (upload.getOriginalFilename() != null ? upload.getOriginalFilename() : "<unnamed>"), e);
         }
     }
 
@@ -132,19 +128,15 @@ public class FileAnalysisService {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (!entry.isDirectory()) {
-                    String entryName = entry.getName();
-
-                    MultipartFile filePart = new MockMultipartFile(
-                            entryName,
-                            entryName,
-                            "application/octet-stream",
-                            zis.readAllBytes()
-                    );
-
                     try {
-                        addToDB(filePart);
+                        addToDB(new MockMultipartFile(
+                                entry.getName(),
+                                entry.getName(),
+                                "application/octet-stream",
+                                zis.readAllBytes()
+                        ));
                     } catch (FileProcessingException e) {
-                        log.error("Failed to process entry '{}': {}", entryName, e.getMessage());
+                        log.error("Failed to process entry '{}': {}", entry.getName(), e.getMessage());
                     }
                 }
                 zis.closeEntry();
