@@ -14,6 +14,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
+import static com.goerdes.correlf.TestUtils.getMockFile;
+
 /**
  * Integration tests for file comparison logic.
  */
@@ -51,12 +53,7 @@ public class FileComparisonIntegrationTest {
     }
 
     private void analyzeAndReport(String label, String resourcePath) throws Exception {
-        List<FileComparison> comparisons = fileAnalysisService.analyze(new MockMultipartFile(
-                "file",
-                resourcePath,
-                "application/octet-stream",
-                new ClassPathResource(resourcePath).getInputStream()
-        ));
+        List<FileComparison> comparisons = fileAnalysisService.analyze(getMockFile(resourcePath));
 
         System.out.println("\n===== " + label.toUpperCase() + " COMPARISONS =====");
         System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(comparisons));

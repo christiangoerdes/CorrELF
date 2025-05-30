@@ -44,8 +44,10 @@ public class FileAnalysisService {
      * @return list of comparisons against each stored file
      * @throws FileProcessingException if parsing or persistence fails
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<FileComparison> analyze(MultipartFile upload) {
+        log.info("Analyzing: {}", upload.getOriginalFilename());
+
         ElfWrapper elfWrapper = toElfWrapper(upload);
         List<FileEntity> stored = fileRepo.findAll();
 
@@ -68,7 +70,7 @@ public class FileAnalysisService {
      * @param file2 the second file to compare
      * @return a {@link TwoFileComparison} including both filenames, similarity score, and rating
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public TwoFileComparison compare(MultipartFile file1, MultipartFile file2) {
         try {
             FileEntity e1 = createEntity(fromMultipart(file1));
