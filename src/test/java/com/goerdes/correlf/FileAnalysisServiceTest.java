@@ -22,7 +22,8 @@ public class FileAnalysisServiceTest {
         for (String file : new String[]{
                 "busybox",
                 "dropbear",
-                "busybox_2"
+                "busybox_arm",
+                "busybox_x86"
         }) {
 
             System.out.println("=== Analysis results for '" + file + "' ===");
