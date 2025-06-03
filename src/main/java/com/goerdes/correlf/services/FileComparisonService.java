@@ -1,14 +1,21 @@
 package com.goerdes.correlf.services;
 
+import com.goerdes.correlf.components.MinHashProvider;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.model.TwoFileComparison;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import static com.goerdes.correlf.model.RepresentationType.ELF_HEADER_VECTOR;
+import static com.goerdes.correlf.model.RepresentationType.STRING_MINHASH;
 import static com.goerdes.correlf.utils.ByteUtils.unpackBytesToDoubles;
+import static com.goerdes.correlf.utils.ByteUtils.unpackBytesToInts;
 
 @Service
+@RequiredArgsConstructor
 public class FileComparisonService {
+
+    private final MinHashProvider minHashProvider;
 
     /**
      * Compares a reference file against a target file and returns
@@ -20,7 +27,7 @@ public class FileComparisonService {
      */
     public TwoFileComparison compareFiles(FileEntity referenceFile, FileEntity targetFile) {
 
-        double similarity = cosineSimilarity(
+        double headerSim = cosineSimilarity(
                 unpackBytesToDoubles(
                         referenceFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
                 ), unpackBytesToDoubles(
@@ -28,10 +35,18 @@ public class FileComparisonService {
                 )
         );
 
+        double stringSim = minHashProvider.get().similarity(
+                unpackBytesToInts(
+                        referenceFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()
+                ), unpackBytesToInts(
+                        targetFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()
+                )
+        );
+
         return new TwoFileComparison() {{
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
-            setSimilarityScore(similarity);
+            setSimilarityScore((headerSim + stringSim) / 2);
         }};
     }
 

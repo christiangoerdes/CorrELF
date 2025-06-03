@@ -12,6 +12,7 @@ import static jakarta.persistence.FetchType.LAZY;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "file")
 public class RepresentationEntity {
 
     @Id

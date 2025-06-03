@@ -1,23 +1,40 @@
-package com.goerdes.correlf.handler;
+package com.goerdes.correlf.components;
 
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.RepresentationEntity;
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.ElfWrapper;
+import com.goerdes.correlf.model.RepresentationType;
+import lombok.RequiredArgsConstructor;
 import net.fornwall.jelf.*;
+import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import static com.goerdes.correlf.components.MinHashProvider.MINHASH_DICT_SIZE;
 import static com.goerdes.correlf.model.RepresentationType.ELF_HEADER_VECTOR;
 import static com.goerdes.correlf.utils.ByteUtils.packDoublesToBytes;
+import static com.goerdes.correlf.utils.ByteUtils.packIntsToBytes;
+import static net.fornwall.jelf.ElfSectionHeader.SHT_STRTAB;
 
+@RequiredArgsConstructor
+@Component
 public class ElfHandler {
+
+    private final MinHashProvider minHashProvider;
 
     /**
      * Reads the provided MultipartFile, computes its SHA-256 hash,
@@ -81,7 +98,7 @@ public class ElfHandler {
      * @param elfWrapper parsed ELF plus filename & SHA-256
      * @return FileEntity with filename, sha256 and representations
      */
-    public static FileEntity createEntity(ElfWrapper elfWrapper) throws FileProcessingException {
+    public FileEntity createEntity(ElfWrapper elfWrapper) throws FileProcessingException {
         FileEntity entity = FileEntity.builder()
                 .filename(elfWrapper.getFilename())
                 .sha256(elfWrapper.getSha256())
@@ -89,10 +106,16 @@ public class ElfHandler {
 
         ElfFile elfFile = elfWrapper.getElfFile();
 
-
         entity.addRepresentation(new RepresentationEntity() {{
             setType(ELF_HEADER_VECTOR);
             setData(packDoublesToBytes(extractHeaderVector(elfFile)));
+            setFile(entity);
+        }});
+
+
+        entity.addRepresentation(new RepresentationEntity() {{
+            setType(RepresentationType.STRING_MINHASH);
+            setData(packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(extractStrings(elfFile)))));
             setFile(entity);
         }});
 
@@ -133,6 +156,40 @@ public class ElfHandler {
                 (double) elf.e_shnum,       // the number of entries in the section header table
                 (double) elf.e_shstrndx     // the section header table index of the entry associated with the section name string table
         };
+    }
+
+    /**
+     * Extracts all “real” null-terminated strings from STRTAB sections
+     * (excluding the section-name table) in the given ElfFile, using streams.
+     *
+     * @param elf the parsed ELF file
+     * @return a List of non-empty strings found in all STRTAB sections
+     */
+    private static List<String> extractStrings(ElfFile elf) {
+        return IntStream.range(0, elf.e_shnum)
+                .filter(i -> elf.getSection(i).header.sh_type == SHT_STRTAB && i != elf.e_shstrndx)
+                .mapToObj(i -> elf.getSection(i).getData())
+                .flatMap(raw -> Arrays.stream(new String(raw, StandardCharsets.ISO_8859_1).split("\0", -1)))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Maps each input string to a token in [0, MINHASH_DICT_SIZE−1] using
+     * floorMod(s.hashCode(), MINHASH_DICT_SIZE) and removes duplicates.
+     *
+     * @param strings strings to tokenize
+     * @return unique set of tokens
+     */
+    public static Set<Integer> mapStringsToTokens(List<String> strings) {
+        Set<Integer> tokenSet = new HashSet<>();
+        for (String s : strings) {
+            int rawHash = s.hashCode();
+            int token = Math.floorMod(rawHash, MINHASH_DICT_SIZE);
+            tokenSet.add(token);
+        }
+        return tokenSet;
     }
 
     private static void printStrings(ByteBuffer buf) {
@@ -195,7 +252,7 @@ public class ElfHandler {
                     sh.sh_link, sh.sh_info, sh.sh_addralign, sh.sh_entsize
             );
 
-            if (sh.sh_type == ElfSectionHeader.SHT_STRTAB) {
+            if (sh.sh_type == SHT_STRTAB) {
                 // getData liefert byte[]
                 ByteBuffer buf = ByteBuffer.wrap(sec.getData());
                 printStrings(buf);

@@ -2,7 +2,6 @@ package com.goerdes.correlf.utils;
 
 import java.nio.ByteBuffer;
 
-import static java.lang.Double.BYTES;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 /**
@@ -18,7 +17,7 @@ public final class ByteUtils {
      */
     public static byte[] packDoublesToBytes(double[] values) {
         ByteBuffer buf = ByteBuffer
-                .allocate(values.length * BYTES)
+                .allocate(values.length * Double.BYTES)
                 .order(LITTLE_ENDIAN);
         for (double v : values) {
             buf.putDouble(v);
@@ -34,17 +33,51 @@ public final class ByteUtils {
      * @throws IllegalArgumentException if bytes.length % 8 != 0
      */
     public static double[] unpackBytesToDoubles(byte[] bytes) {
-        if (bytes.length % BYTES != 0) {
-            throw new IllegalArgumentException("Byte array length must be a multiple of " + BYTES);
+        if (bytes.length % Double.BYTES != 0) {
+            throw new IllegalArgumentException("Byte array length must be a multiple of " + Double.BYTES);
         }
         ByteBuffer buf = ByteBuffer
                 .wrap(bytes)
                 .order(LITTLE_ENDIAN);
-        double[] values = new double[bytes.length / BYTES];
+        double[] values = new double[bytes.length / Double.BYTES];
         for (int i = 0; i < values.length; i++) {
             values[i] = buf.getDouble();
         }
         return values;
+    }
+
+    /**
+     * Packs an array of ints into a byte array (little‐endian).
+     *
+     * @param values the int[] to pack
+     * @return a byte[] of length values.length * 4
+     */
+    public static byte[] packIntsToBytes(int[] values) {
+        ByteBuffer buf = ByteBuffer
+                .allocate(values.length * Integer.BYTES)
+                .order(LITTLE_ENDIAN);
+        for (int v : values) {
+            buf.putInt(v);
+        }
+        return buf.array();
+    }
+
+    /**
+     * Unpacks a little‐endian byte[] back into an int[].
+     *
+     * @param bytes the byte array (length must be multiple of 4)
+     * @return an array of ints
+     */
+    public static int[] unpackBytesToInts(byte[] bytes) {
+        if (bytes.length % Integer.BYTES != 0) {
+            throw new IllegalArgumentException("Byte array length must be a multiple of " + Integer.BYTES);
+        }
+        ByteBuffer buf = ByteBuffer.wrap(bytes).order(LITTLE_ENDIAN);
+        int[] ints = new int[bytes.length / Integer.BYTES];
+        for (int i = 0; i < ints.length; i++) {
+            ints[i] = buf.getInt();
+        }
+        return ints;
     }
 }
 

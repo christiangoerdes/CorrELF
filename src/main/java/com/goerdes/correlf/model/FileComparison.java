@@ -17,10 +17,10 @@ public class FileComparison {
     public static final String LOW = "low";
 
     /** Minimum score (inclusive) to qualify as a “high” similarity. */
-    private static final double HIGH_THRESHOLD = 0.9; //TODO Adjust value
+    private static final double HIGH_THRESHOLD = 0.7; //TODO Adjust value
 
     /** Maximum score (inclusive) to qualify as a “low” similarity. */
-    private static final double LOW_THRESHOLD  = 0.2; //TODO Adjust value
+    private static final double LOW_THRESHOLD  = 0.3; //TODO Adjust value
 
     /** Computed similarity score between two files (0.0–1.0). */
     private double similarityScore;

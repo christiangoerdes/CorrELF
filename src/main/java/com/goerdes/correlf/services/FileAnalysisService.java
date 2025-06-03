@@ -1,5 +1,6 @@
 package com.goerdes.correlf.services;
 
+import com.goerdes.correlf.components.ElfHandler;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.exception.FileProcessingException;
@@ -16,12 +17,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static com.goerdes.correlf.handler.ElfHandler.createEntity;
-import static com.goerdes.correlf.handler.ElfHandler.fromMultipart;
+import static com.goerdes.correlf.components.ElfHandler.fromMultipart;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Service responsible for analyzing uploaded ELF files, comparing them to existing
@@ -35,6 +35,7 @@ public class FileAnalysisService {
 
     private final FileComparisonService comparisonService;
     private final FileRepo fileRepo;
+    private final ElfHandler elfHandler;
 
     /**
      * Parse and store the uploaded file (if new), then compare it
@@ -55,11 +56,12 @@ public class FileAnalysisService {
                 .map(FileEntity::getFilename)
                 .noneMatch(elfWrapper.getFilename()::equals)
         ) {
-            fileRepo.save(createEntity(elfWrapper));
+            fileRepo.save(elfHandler.createEntity(elfWrapper));
         }
 
         return stored.stream()
-                .map(other -> (FileComparison) comparisonService.compareFiles(createEntity(elfWrapper), other))
+                .map(other -> (FileComparison) comparisonService.compareFiles(elfHandler.createEntity(elfWrapper),
+                        other))
                 .toList();
     }
 
@@ -73,8 +75,8 @@ public class FileAnalysisService {
     @Transactional
     public TwoFileComparison compare(MultipartFile file1, MultipartFile file2) {
         try {
-            FileEntity e1 = createEntity(fromMultipart(file1));
-            FileEntity e2 = createEntity(fromMultipart(file2));
+            FileEntity e1 = elfHandler.createEntity(fromMultipart(file1));
+            FileEntity e2 = elfHandler.createEntity(fromMultipart(file2));
 
             if (e1.getSha256().equals(e2.getSha256())) {
                 return new TwoFileComparison() {{
@@ -90,29 +92,6 @@ public class FileAnalysisService {
     }
 
     /**
-     * Parses the given uploaded ELF file, constructs its corresponding
-     * FileEntity (including SHA-256 and extracted representations), and
-     * persists it to the database.
-     *
-     * @param file the ELF file received as a MultipartFile
-     * @throws FileProcessingException if parsing or representation extraction fails
-     */
-    public void addToDB(MultipartFile file) {
-        fileRepo.save(createEntity(toElfWrapper(file)));
-    }
-
-    /**
-     * Parses the upload into ElfWrapper, rethrowing IO as a FileProcessingException.
-     */
-    private ElfWrapper toElfWrapper(MultipartFile upload) {
-        try {
-            return fromMultipart(upload);
-        } catch (IOException e) {
-            throw new FileProcessingException("Failed to parse ELF from " + (upload.getOriginalFilename() != null ? upload.getOriginalFilename() : "<unnamed>"), e);
-        }
-    }
-
-    /**
      * Imports all ELF binaries contained in the given ZIP archive into the database.
      * <p>
      * Each non-directory entry is read into memory, wrapped in a
@@ -124,7 +103,9 @@ public class FileAnalysisService {
      * @throws IOException if an I/O error occurs while reading the archive
      */
     public void importZipArchive(MultipartFile archive) throws IOException {
-        Objects.requireNonNull(archive, "Archive must not be null");
+        requireNonNull(archive, "Archive must not be null");
+
+        log.info("Importing ZIP archive: {}", archive.getOriginalFilename());
 
         try (ZipInputStream zis = new ZipInputStream(archive.getInputStream())) {
             ZipEntry entry;
@@ -143,6 +124,29 @@ public class FileAnalysisService {
                 }
                 zis.closeEntry();
             }
+        }
+    }
+
+    /**
+     * Parses the given uploaded ELF file, constructs its corresponding
+     * FileEntity (including SHA-256 and extracted representations), and
+     * persists it to the database.
+     *
+     * @param file the ELF file received as a MultipartFile
+     * @throws FileProcessingException if parsing or representation extraction fails
+     */
+    public void addToDB(MultipartFile file) {
+        fileRepo.save(elfHandler.createEntity(toElfWrapper(file)));
+    }
+
+    /**
+     * Parses the upload into ElfWrapper, rethrowing IO as a FileProcessingException.
+     */
+    private ElfWrapper toElfWrapper(MultipartFile upload) {
+        try {
+            return fromMultipart(upload);
+        } catch (IOException e) {
+            throw new FileProcessingException("Failed to parse ELF from " + (upload.getOriginalFilename() != null ? upload.getOriginalFilename() : "<unnamed>"), e);
         }
     }
 
