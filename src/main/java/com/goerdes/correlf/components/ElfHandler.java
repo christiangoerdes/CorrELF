@@ -8,15 +8,9 @@ import com.goerdes.correlf.model.RepresentationType;
 import lombok.RequiredArgsConstructor;
 import net.fornwall.jelf.*;
 import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -35,61 +29,6 @@ import static net.fornwall.jelf.ElfSectionHeader.SHT_STRTAB;
 public class ElfHandler {
 
     private final MinHashProvider minHashProvider;
-
-    /**
-     * Reads the provided MultipartFile, computes its SHA-256 hash,
-     * writes it to a temporary file named as the original upload,
-     * parses it into an ElfFile, and returns an ElfWrapper.
-     *
-     * @param file the uploaded MultipartFile
-     * @return an ElfWrapper containing the original filename, parsed ElfFile, and SHA-256 hash
-     * @throws IOException if an I/O error occurs during file operations
-     */
-    public static ElfWrapper fromMultipart(MultipartFile file) throws IOException {
-        String originalName = file.getOriginalFilename();
-        if (originalName == null) {
-            throw new FileProcessingException("Original filename is missing", null);
-        }
-
-        byte[] content = file.getBytes();
-
-        Path tempDir = Files.createTempDirectory("elf-upload-");
-        Path tempFile = tempDir.resolve(originalName);
-        try {
-            Files.write(tempFile, content);
-            return new ElfWrapper(
-                    originalName,
-                    ElfFile.from(tempFile.toFile()),
-                    computeSha256(content)
-            );
-        } catch (Exception e) {
-            throw new FileProcessingException("Failed to parse ELF from " + originalName, e);
-        } finally {
-            Files.deleteIfExists(tempFile);
-            Files.deleteIfExists(tempDir);
-        }
-    }
-
-    /**
-     * Computes the SHA-256 digest of the given byte array and returns
-     * it as a lowercase hexadecimal string.
-     *
-     * @param data the input bytes to hash
-     * @return the hex-encoded SHA-256 hash
-     * @throws FileProcessingException if SHA-256 algorithm is unavailable
-     */
-    private static String computeSha256(byte[] data) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(data);
-            StringBuilder sb = new StringBuilder(digest.length * 2);
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new FileProcessingException("SHA-256 algorithm not available", e);
-        }
-    }
 
     /**
      * Creates a FileEntity from the given ELF wrapper by extracting

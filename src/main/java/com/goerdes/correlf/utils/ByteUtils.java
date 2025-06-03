@@ -1,6 +1,10 @@
 package com.goerdes.correlf.utils;
 
+import com.goerdes.correlf.exception.FileProcessingException;
+
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
@@ -78,6 +82,27 @@ public final class ByteUtils {
             ints[i] = buf.getInt();
         }
         return ints;
+    }
+
+    /**
+     * Computes the SHA-256 digest of the given byte array and returns
+     * it as a lowercase hexadecimal string.
+     *
+     * @param data the input bytes to hash
+     * @return the hex-encoded SHA-256 hash
+     * @throws FileProcessingException if SHA-256 algorithm is unavailable
+     */
+    public static String computeSha256(byte[] data) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(data);
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new FileProcessingException("SHA-256 algorithm not available", e);
+        }
     }
 }
 

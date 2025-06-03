@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static com.goerdes.correlf.components.ElfHandler.fromMultipart;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -49,7 +48,7 @@ public class FileAnalysisService {
     public List<FileComparison> analyze(MultipartFile upload) {
         log.info("Analyzing: {}", upload.getOriginalFilename());
 
-        ElfWrapper elfWrapper = toElfWrapper(upload);
+        ElfWrapper elfWrapper = new ElfWrapper(upload);
         List<FileEntity> stored = fileRepo.findAll();
 
         if (fileRepo.findBySha256(elfWrapper.getSha256()).stream()
@@ -74,21 +73,17 @@ public class FileAnalysisService {
      */
     @Transactional
     public TwoFileComparison compare(MultipartFile file1, MultipartFile file2) {
-        try {
-            FileEntity e1 = elfHandler.createEntity(fromMultipart(file1));
-            FileEntity e2 = elfHandler.createEntity(fromMultipart(file2));
+        FileEntity e1 = elfHandler.createEntity(new ElfWrapper(file1));
+        FileEntity e2 = elfHandler.createEntity(new ElfWrapper(file2));
 
-            if (e1.getSha256().equals(e2.getSha256())) {
-                return new TwoFileComparison() {{
-                    setFileName(e1.getFilename());
-                    setSecondFileName(e2.getFilename());
-                    setSimilarityScore(1);
-                }};
-            }
-            return comparisonService.compareFiles(e1, e2);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if (e1.getSha256().equals(e2.getSha256())) {
+            return new TwoFileComparison() {{
+                setFileName(e1.getFilename());
+                setSecondFileName(e2.getFilename());
+                setSimilarityScore(1);
+            }};
         }
+        return comparisonService.compareFiles(e1, e2);
     }
 
     /**
@@ -136,18 +131,7 @@ public class FileAnalysisService {
      * @throws FileProcessingException if parsing or representation extraction fails
      */
     public void addToDB(MultipartFile file) {
-        fileRepo.save(elfHandler.createEntity(toElfWrapper(file)));
-    }
-
-    /**
-     * Parses the upload into ElfWrapper, rethrowing IO as a FileProcessingException.
-     */
-    private ElfWrapper toElfWrapper(MultipartFile upload) {
-        try {
-            return fromMultipart(upload);
-        } catch (IOException e) {
-            throw new FileProcessingException("Failed to parse ELF from " + (upload.getOriginalFilename() != null ? upload.getOriginalFilename() : "<unnamed>"), e);
-        }
+        fileRepo.save(elfHandler.createEntity(new ElfWrapper(file)));
     }
 
 }
