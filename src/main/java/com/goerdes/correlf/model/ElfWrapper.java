@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static com.goerdes.correlf.utils.ByteUtils.computeSha256;
+import static java.nio.file.Files.size;
 
 /**
  * Wraps an uploaded ELF binary, preserving its original filename,
@@ -26,6 +27,10 @@ public class ElfWrapper {
 
     /** Hex-encoded SHA-256 digest of the file’s bytes. */
     private final String sha256;
+
+    /** The size of the file. */
+    private final long size;
+
 
     /**
      * Reads the given {@link MultipartFile}, writes it to a temporary file,
@@ -61,6 +66,7 @@ public class ElfWrapper {
             this.filename = originalName;
             this.elfFile = ElfFile.from(tempFile.toFile());
             this.sha256 = computeSha256(content);
+            this.size = size(tempFile);
         } catch (Exception e) {
             throw new FileProcessingException("Failed to parse ELF from " + originalName, e);
         } finally {

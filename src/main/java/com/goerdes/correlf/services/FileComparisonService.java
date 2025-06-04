@@ -6,8 +6,7 @@ import com.goerdes.correlf.model.TwoFileComparison;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import static com.goerdes.correlf.model.RepresentationType.ELF_HEADER_VECTOR;
-import static com.goerdes.correlf.model.RepresentationType.STRING_MINHASH;
+import static com.goerdes.correlf.model.RepresentationType.*;
 import static com.goerdes.correlf.utils.ByteUtils.unpackBytesToDoubles;
 import static com.goerdes.correlf.utils.ByteUtils.unpackBytesToInts;
 
@@ -43,10 +42,19 @@ public class FileComparisonService {
                 )
         );
 
+        double sectionSizeSim = cosineSimilarity(
+                unpackBytesToDoubles(
+                        referenceFile.findRepresentationByType(SECTION_SIZE_VECTOR).orElseThrow().getData()
+                ), unpackBytesToDoubles(
+                        targetFile.findRepresentationByType(SECTION_SIZE_VECTOR).orElseThrow().getData()
+                )
+        );
+
         return new TwoFileComparison() {{
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
             setSimilarityScore((headerSim + stringSim) / 2);
+            // setSimilarityScore(0.701*sectionSizeSim);
         }};
     }
 

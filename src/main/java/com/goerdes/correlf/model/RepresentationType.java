@@ -10,5 +10,11 @@ public enum RepresentationType {
     ELF_HEADER_VECTOR,
 
     /** A MinHash signature (packed as bytes) representing the ELF’s string set. */
-    STRING_MINHASH
+    STRING_MINHASH,
+
+    /**
+     * A fixed‐length vector of normalized sizes (as a fraction of total file size)
+     * for key ELF sections: .text, .rodata, .data, .bss, .symtab, and .shstrtab.
+     */
+    SECTION_SIZE_VECTOR
 }

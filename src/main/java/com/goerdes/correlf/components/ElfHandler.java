@@ -4,24 +4,23 @@ import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.RepresentationEntity;
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.ElfWrapper;
-import com.goerdes.correlf.model.RepresentationType;
 import lombok.RequiredArgsConstructor;
 import net.fornwall.jelf.*;
 import org.springframework.stereotype.Component;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import static com.goerdes.correlf.components.MinHashProvider.MINHASH_DICT_SIZE;
-import static com.goerdes.correlf.model.RepresentationType.ELF_HEADER_VECTOR;
+import static com.goerdes.correlf.model.RepresentationType.*;
 import static com.goerdes.correlf.utils.ByteUtils.packDoublesToBytes;
 import static com.goerdes.correlf.utils.ByteUtils.packIntsToBytes;
+import static java.util.AbstractMap.SimpleEntry;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.IntStream.range;
 import static net.fornwall.jelf.ElfSectionHeader.SHT_STRTAB;
 
 @RequiredArgsConstructor
@@ -53,15 +52,63 @@ public class ElfHandler {
 
 
         entity.addRepresentation(new RepresentationEntity() {{
-            setType(RepresentationType.STRING_MINHASH);
+            setType(STRING_MINHASH);
             setData(packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(extractStrings(elfFile)))));
             setFile(entity);
         }});
+
+        entity.addRepresentation(new RepresentationEntity() {{
+            setType(SECTION_SIZE_VECTOR);
+            setData(packDoublesToBytes(buildSectionSizeVector(elfWrapper)));
+            setFile(entity);
+        }});
+
 
         // debugPrint(elfFile);
 
         return entity;
     }
+
+    /**
+     * Returns a length-6 vector of normalized section sizes for the ELF:
+     * [".text", ".rodata", ".data", ".bss", ".symtab", ".shstrtab"].
+     * Missing sections yield 0.0.
+     *
+     * @param elfWrapper an ElfWrapper with parsed ElfFile and its total size
+     * @return a double[6] of (sectionSize / totalSize)
+     * @throws ElfException if any section cannot be read
+     */
+    public static double[] buildSectionSizeVector(ElfWrapper elfWrapper) throws ElfException {
+        ElfFile elfFile = elfWrapper.getElfFile();
+
+        Map<String, Integer> idxMap = Map.of(
+                ".text",0,  // executable instructions
+                ".rodata",  1,  // read-only data (constants, literals)
+                ".data",    2,  // initialized writable data
+                ".bss",     3,  // uninitialized writable data (zero-initialized)
+                ".symtab",  4,  // symbol table
+                ".shstrtab",    5   // section-header string table
+        );
+
+        Map<String, Long> sectionSizeMap = IntStream.range(0, elfFile.e_shnum)
+                .mapToObj(elfFile::getSection)
+                .map(section -> (section.header.getName() == null)
+                        ? null
+                        : new AbstractMap.SimpleEntry<>(section.header.getName().trim(), section.header.sh_size))
+                .filter(entry -> entry != null && idxMap.containsKey(entry.getKey()))
+                .collect(toMap(
+                        SimpleEntry::getKey,
+                        SimpleEntry::getValue,
+                        (existing, replacement) -> existing
+                ));
+
+        double[] sectionSizes = new double[idxMap.size()];
+        Arrays.fill(sectionSizes, 0.0);
+        idxMap.forEach((name, idx) -> sectionSizes[idx] = (double) sectionSizeMap.getOrDefault(name, 0L) / (double) elfWrapper.getSize());
+
+        return sectionSizes;
+    }
+
 
     /**
      * Builds a fixed‐length numeric vector from the ELF header fields.
@@ -105,13 +152,13 @@ public class ElfHandler {
      * @return a List of non-empty strings found in all STRTAB sections
      */
     private static List<String> extractStrings(ElfFile elf) {
-        return IntStream.range(0, elf.e_shnum)
+        return range(0, elf.e_shnum)
                 .filter(i -> elf.getSection(i).header.sh_type == SHT_STRTAB && i != elf.e_shstrndx)
                 .mapToObj(i -> elf.getSection(i).getData())
                 .flatMap(raw -> Arrays.stream(new String(raw, StandardCharsets.ISO_8859_1).split("\0", -1)))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
     /**
