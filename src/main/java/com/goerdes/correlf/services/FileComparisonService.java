@@ -2,9 +2,13 @@ package com.goerdes.correlf.services;
 
 import com.goerdes.correlf.components.MinHashProvider;
 import com.goerdes.correlf.db.FileEntity;
+import com.goerdes.correlf.model.RepresentationType;
 import com.goerdes.correlf.model.TwoFileComparison;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.goerdes.correlf.model.RepresentationType.*;
 import static com.goerdes.correlf.utils.ByteUtils.unpackBytesToDoubles;
@@ -25,37 +29,53 @@ public class FileComparisonService {
      * @return a FileComparison describing the similarity result for the target file
      */
     public TwoFileComparison compareFiles(FileEntity referenceFile, FileEntity targetFile) {
+        Map<RepresentationType, Double> comparisons = new HashMap<>();
 
-        double headerSim = cosineSimilarity(
-                unpackBytesToDoubles(
-                        referenceFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
-                ), unpackBytesToDoubles(
-                        targetFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
-                )
-        );
+        double headerSim = getHeaderSim(referenceFile, targetFile);
+        comparisons.put(ELF_HEADER_VECTOR, headerSim);
 
-        double stringSim = minHashProvider.get().similarity(
-                unpackBytesToInts(
-                        referenceFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()
-                ), unpackBytesToInts(
-                        targetFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()
-                )
-        );
+        double stringSim = getStringSim(referenceFile, targetFile);
+        comparisons.put(STRING_MINHASH, stringSim);
 
-        double sectionSizeSim = cosineSimilarity(
+        double sectionSizeSim = getSectionSizeSim(referenceFile, targetFile);
+        comparisons.put(SECTION_SIZE_VECTOR, sectionSizeSim);
+
+        return new TwoFileComparison() {{
+            setFileName(targetFile.getFilename());
+            setSecondFileName(referenceFile.getFilename());
+            setComparisonDetails(comparisons);
+            setSimilarityScore(stringSim);
+        }};
+    }
+
+    double getSectionSizeSim(FileEntity referenceFile, FileEntity targetFile) {
+        return cosineSimilarity(
                 unpackBytesToDoubles(
                         referenceFile.findRepresentationByType(SECTION_SIZE_VECTOR).orElseThrow().getData()
                 ), unpackBytesToDoubles(
                         targetFile.findRepresentationByType(SECTION_SIZE_VECTOR).orElseThrow().getData()
                 )
         );
+    }
 
-        return new TwoFileComparison() {{
-            setFileName(targetFile.getFilename());
-            setSecondFileName(referenceFile.getFilename());
-            setSimilarityScore((headerSim + stringSim) / 2);
-            // setSimilarityScore(0.701*sectionSizeSim);
-        }};
+    double getStringSim(FileEntity referenceFile, FileEntity targetFile) {
+        return minHashProvider.get().similarity(
+                unpackBytesToInts(
+                        referenceFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()
+                ), unpackBytesToInts(
+                        targetFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()
+                )
+        );
+    }
+
+    double getHeaderSim(FileEntity referenceFile, FileEntity targetFile) {
+        return cosineSimilarity(
+                unpackBytesToDoubles(
+                        referenceFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
+                ), unpackBytesToDoubles(
+                        targetFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
+                )
+        );
     }
 
     /**
