@@ -2,8 +2,8 @@ package com.goerdes.correlf;
 
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.FileRepo;
+import com.goerdes.correlf.model.FileComparison;
 import com.goerdes.correlf.model.RepresentationType;
-import com.goerdes.correlf.model.TwoFileComparison;
 import com.goerdes.correlf.services.FileComparisonService;
 import com.goerdes.correlf.utils.DataSetup;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,7 @@ public class WeightFindingTest extends DataSetup {
 
         List<RawSim> rawList = new ArrayList<>();
         for (FileEntity target : fileRepo.findAll()) {
-            TwoFileComparison comp = comparisonService.compareFiles(reference, target);
+            FileComparison comp = comparisonService.compareFiles(reference, target);
             Map<RepresentationType, Double> details = comp.getComparisonDetails();
             boolean isFamily = target.getFilename().toLowerCase().contains(familyKey);
             rawList.add(new RawSim(

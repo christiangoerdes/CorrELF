@@ -2,8 +2,8 @@ package com.goerdes.correlf.services;
 
 import com.goerdes.correlf.components.MinHashProvider;
 import com.goerdes.correlf.db.FileEntity;
+import com.goerdes.correlf.model.FileComparison;
 import com.goerdes.correlf.model.RepresentationType;
-import com.goerdes.correlf.model.TwoFileComparison;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +39,7 @@ public class FileComparisonService {
      * @param targetFile    the file entity to compare against the reference
      * @return a FileComparison describing the similarity result for the target file
      */
-    public TwoFileComparison compareFiles(FileEntity referenceFile, FileEntity targetFile) {
+    public FileComparison compareFiles(FileEntity referenceFile, FileEntity targetFile) {
         Map<RepresentationType, Double> comparisons = new HashMap<>();
 
         double headerSim = getHeaderSim(referenceFile, targetFile);
@@ -55,7 +55,7 @@ public class FileComparisonService {
                 .mapToDouble(e -> weights.getOrDefault(e.getKey(), 0.0) * e.getValue())
                 .sum();
 
-        return new TwoFileComparison() {{
+        return new FileComparison() {{
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);

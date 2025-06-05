@@ -26,15 +26,19 @@ public class FileComparison {
     /** Maximum score (inclusive) to qualify as a “low” similarity. */
     private static final double LOW_THRESHOLD  = 0.3;
 
+    /** Name of the file being compared. */
+    @Setter
+    private String fileName;
+
+    /** Name of the second file in the comparison. */
+    @Setter
+    private String secondFileName;
+
     /** Computed similarity score between two files (0.0–1.0). */
     private double similarityScore;
 
     /** Category corresponding to the similarityScore: HIGH, MEDIUM or LOW. */
     private String similarityRating;
-
-    /** Name of the file being compared. */
-    @Setter
-    private String fileName;
 
     /**
      * Map of per-representation similarity values. Each key is a RepresentationType,
@@ -44,9 +48,9 @@ public class FileComparison {
     private Map<RepresentationType, Double> comparisonDetails = new HashMap<>();
 
     /**
-     * Sets the similarity score and immediately re-computes its rating.
+     * Updates the overall similarityScore and recomputes similarityRating.
      *
-     * @param similarityScore a value between 0.0 and 1.0
+     * @param similarityScore value between 0.0 and 1.0
      */
     public void setSimilarityScore(double similarityScore) {
         this.similarityScore = similarityScore;

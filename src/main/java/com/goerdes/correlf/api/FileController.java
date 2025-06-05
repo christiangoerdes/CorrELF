@@ -2,7 +2,6 @@ package com.goerdes.correlf.api;
 
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.FileComparison;
-import com.goerdes.correlf.model.TwoFileComparison;
 import com.goerdes.correlf.services.FileAnalysisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -54,7 +53,7 @@ public class FileController {
      * @throws FileProcessingException if file handling or comparison fails
      */
     @PostMapping("/compare")
-    public ResponseEntity<TwoFileComparison> compareFiles(
+    public ResponseEntity<FileComparison> compareFiles(
             @RequestParam("file1") MultipartFile file1,
             @RequestParam("file2") MultipartFile file2
     ) {
