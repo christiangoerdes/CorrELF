@@ -7,6 +7,7 @@ import com.goerdes.correlf.model.TwoFileComparison;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +20,16 @@ import static com.goerdes.correlf.utils.ByteUtils.unpackBytesToInts;
 public class FileComparisonService {
 
     private final MinHashProvider minHashProvider;
+
+    /**
+     * Weights for each RepresentationType.
+     */
+    private final Map<RepresentationType, Double> weights = new EnumMap<>(Map.of(
+            ELF_HEADER_VECTOR, 0.0,
+            STRING_MINHASH,    0.4,
+            SECTION_SIZE_VECTOR, 0.6
+    ));
+
 
     /**
      * Compares a reference file against a target file and returns
@@ -40,11 +51,15 @@ public class FileComparisonService {
         double sectionSizeSim = getSectionSizeSim(referenceFile, targetFile);
         comparisons.put(SECTION_SIZE_VECTOR, sectionSizeSim);
 
+        double simScore = comparisons.entrySet().stream()
+                .mapToDouble(e -> weights.getOrDefault(e.getKey(), 0.0) * e.getValue())
+                .sum();
+
         return new TwoFileComparison() {{
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);
-            setSimilarityScore(stringSim);
+            setSimilarityScore(simScore);
         }};
     }
 
