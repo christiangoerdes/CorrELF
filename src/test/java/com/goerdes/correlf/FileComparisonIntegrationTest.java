@@ -2,16 +2,10 @@ package com.goerdes.correlf;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goerdes.correlf.model.FileComparison;
-import com.goerdes.correlf.services.FileAnalysisService;
-import org.junit.jupiter.api.BeforeAll;
+import com.goerdes.correlf.utils.DataSetup;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 import static com.goerdes.correlf.TestUtils.getMockFile;
@@ -20,27 +14,10 @@ import static com.goerdes.correlf.TestUtils.getMockFile;
  * Integration tests for file comparison logic.
  */
 @SpringBootTest
-public class FileComparisonIntegrationTest {
+public class FileComparisonIntegrationTest extends DataSetup {
 
-    private static FileAnalysisService fileAnalysisService;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    /**
-     * Ingests the ZIP before any tests run.
-     * Uses parameter injection to get the Spring bean into this static method.
-     */
-    @BeforeAll
-    static void setupData(@Autowired FileAnalysisService service) throws IOException {
-        fileAnalysisService = service;
-        ClassPathResource zipRes = new ClassPathResource("all_elfs.zip");
-        MultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "all_elfs.zip",
-                "application/zip",
-                zipRes.getInputStream()
-        );
-        fileAnalysisService.importZipArchive(zipFile);
-    }
 
     @Test
     void testBusybox() throws Exception {

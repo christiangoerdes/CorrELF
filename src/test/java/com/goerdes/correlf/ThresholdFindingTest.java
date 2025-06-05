@@ -2,14 +2,9 @@ package com.goerdes.correlf;
 
 import com.goerdes.correlf.model.FileComparison;
 import com.goerdes.correlf.model.RepresentationType;
-import com.goerdes.correlf.services.FileAnalysisService;
-import org.junit.jupiter.api.BeforeAll;
+import com.goerdes.correlf.utils.DataSetup;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -17,22 +12,7 @@ import java.util.List;
 import static com.goerdes.correlf.TestUtils.getMockFile;
 
 @SpringBootTest
-public class ThresholdFindingTest {
-
-    private static FileAnalysisService fileAnalysisService;
-
-    @BeforeAll
-    static void setupData(@Autowired FileAnalysisService service) throws IOException {
-        ClassPathResource zipRes = new ClassPathResource("all_elfs.zip");
-        MultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "all_elfs.zip",
-                "application/zip",
-                zipRes.getInputStream()
-        );
-        service.importZipArchive(zipFile);
-        fileAnalysisService = service;
-    }
+public class ThresholdFindingTest extends DataSetup {
 
     private double findThresholdByMinFamilySim(String familyKey, RepresentationType type) throws IOException {
         List<FileComparison> comparisons = fileAnalysisService.analyze(getMockFile(familyKey));

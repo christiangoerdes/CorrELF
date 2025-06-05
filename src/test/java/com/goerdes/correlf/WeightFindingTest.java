@@ -4,18 +4,13 @@ import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.model.RepresentationType;
 import com.goerdes.correlf.model.TwoFileComparison;
-import com.goerdes.correlf.services.FileAnalysisService;
 import com.goerdes.correlf.services.FileComparisonService;
-import org.junit.jupiter.api.BeforeAll;
+import com.goerdes.correlf.utils.DataSetup;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,28 +22,13 @@ import static com.goerdes.correlf.model.RepresentationType.*;
  */
 @SpringBootTest
 @Transactional
-public class WeightFindingTest {
-
-    @Autowired
-    private FileAnalysisService fileAnalysisService;
+public class WeightFindingTest extends DataSetup {
 
     @Autowired
     private FileComparisonService comparisonService;
 
     @Autowired
     private FileRepo fileRepo;
-
-    @BeforeAll
-    static void setupData(@Autowired FileAnalysisService service) throws IOException {
-        ClassPathResource zipRes = new ClassPathResource("all_elfs.zip");
-        MultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "all_elfs.zip",
-                "application/zip",
-                zipRes.getInputStream()
-        );
-        service.importZipArchive(zipFile);
-    }
 
     /**
      * Gathers raw per‐representation similarity values between the first "familyKey" file
