@@ -6,7 +6,6 @@ import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.ElfWrapper;
 import com.goerdes.correlf.model.FileComparison;
-import com.goerdes.correlf.model.TwoFileComparison;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +58,7 @@ public class FileAnalysisService {
         }
 
         return stored.stream()
-                .map(other -> (FileComparison) comparisonService.compareFiles(elfHandler.createEntity(elfWrapper),
-                        other))
+                .map(other -> comparisonService.compareFiles(elfHandler.createEntity(elfWrapper), other))
                 .toList();
     }
 
@@ -69,15 +67,15 @@ public class FileAnalysisService {
      *
      * @param file1 the first file to compare
      * @param file2 the second file to compare
-     * @return a {@link TwoFileComparison} including both filenames, similarity score, and rating
+     * @return a {@link FileComparison} including both filenames, similarity score, and rating
      */
     @Transactional
-    public TwoFileComparison compare(MultipartFile file1, MultipartFile file2) {
+    public FileComparison compare(MultipartFile file1, MultipartFile file2) {
         FileEntity e1 = elfHandler.createEntity(new ElfWrapper(file1));
         FileEntity e2 = elfHandler.createEntity(new ElfWrapper(file2));
 
         if (e1.getSha256().equals(e2.getSha256())) {
-            return new TwoFileComparison() {{
+            return new FileComparison() {{
                 setFileName(e1.getFilename());
                 setSecondFileName(e2.getFilename());
                 setSimilarityScore(1);
