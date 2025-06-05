@@ -8,7 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 
-import static com.goerdes.correlf.TestUtils.getMockFile;
+import static com.goerdes.correlf.utils.TestUtils.getMockFile;
 
 /**
  * Integration tests for file comparison logic.

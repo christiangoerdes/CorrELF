@@ -8,7 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
 
-import static com.goerdes.correlf.TestUtils.getMockFile;
+import static com.goerdes.correlf.utils.TestUtils.getMockFile;
 
 @SpringBootTest
 public class ElfHandlerTest {
