@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.goerdes.correlf.utils.ByteUtils.computeSha256;
@@ -74,11 +75,17 @@ public class ElfWrapper {
             this.sha256 = computeSha256(content);
             this.codeRegions = parser.parse(tempFile);
 
-            Files.deleteIfExists(tempFile);
+            Path tempDir = tempFile.getParent();
             Files.deleteIfExists(tempFile);
 
-            try {
-                Files.delete(tempFile.getParent());
+            // recursively delete everything under tempDir
+            try (var stream = Files.walk(tempDir)) {
+                stream.sorted(Comparator.reverseOrder())
+                        .forEach(p -> {
+                            try {
+                                Files.deleteIfExists(p);
+                            } catch (IOException ignored) {}
+                        });
             } catch (IOException ignored) {}
         } catch (Exception e) {
             throw new FileProcessingException("Failed to wrap ELF: " + e.getMessage(), e);
