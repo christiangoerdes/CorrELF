@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static com.goerdes.correlf.TestUtils.getMockFile;
+import static com.goerdes.correlf.utils.TestUtils.getMockFile;
 
 @SpringBootTest
 public class FileAnalysisServiceTest {
