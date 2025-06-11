@@ -20,7 +20,7 @@ public class ElfHandlerTest {
 
     @Test
     void testEntityCreation() throws IOException {
-        System.out.println(new ElfHandler(new MinHashProvider()).createEntity(new ElfWrapper(
+        System.out.println(new ElfHandler(new MinHashProvider()).createEntity(ElfWrapper.of(
                 getMockFile("busybox"),
                 coderecParser)
         ));
