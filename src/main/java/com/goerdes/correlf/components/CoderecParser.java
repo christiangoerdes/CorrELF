@@ -3,8 +3,8 @@ package com.goerdes.correlf.components;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goerdes.correlf.exception.FileProcessingException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -19,10 +19,15 @@ import java.util.Map;
  * The path to the coderec executable is configurable via the <code>coderec.path</code> property.
  */
 @Component
-@RequiredArgsConstructor
 public class CoderecParser {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private final Resource coderecResource;
+
+    public CoderecParser(@Value("${coderec.location}") Resource coderecResource) {
+        this.coderecResource = coderecResource;
+    }
 
     /**
      * Invokes <code>coderec &lt;elfPath&gt;</code>, parses the JSON field
@@ -35,7 +40,7 @@ public class CoderecParser {
     @SuppressWarnings("unchecked")
     public List<CodeRegion> parse(Path elfPath) {
         try {
-            Path coderec = Path.of(new ClassPathResource("coderec/coderec.exe").getURI());
+            Path coderec = coderecResource.getFile().toPath();
             ProcessBuilder pb = new ProcessBuilder(coderec.toString(), elfPath.toString());
             pb.redirectErrorStream(true);
             Process p = pb.start();

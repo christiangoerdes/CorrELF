@@ -1,5 +1,6 @@
 package com.goerdes.correlf.model;
 
+import com.goerdes.correlf.components.CoderecParser;
 import com.goerdes.correlf.exception.FileProcessingException;
 import lombok.Data;
 import net.fornwall.jelf.ElfFile;
@@ -8,13 +9,19 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static com.goerdes.correlf.utils.ByteUtils.computeSha256;
-import static java.nio.file.Files.size;
 
 /**
- * Wraps an uploaded ELF binary, preserving its original filename,
- * the parsed {@link ElfFile} instance, and the SHA-256 hash of its contents.
+ * Encapsulates an uploaded ELF binary:
+ * <ul>
+ *   <li>Original filename as provided by the client</li>
+ *   <li>Parsed {@link ElfFile} for internal metadata and structure</li>
+ *   <li>SHA-256 digest of the file contents</li>
+ *   <li>File size in bytes</li>
+ *   <li>List of {@link CoderecParser.CodeRegion code regions} as identified by coderec</li>
+ * </ul>
  */
 @Data
 public class ElfWrapper {
@@ -31,49 +38,50 @@ public class ElfWrapper {
     /** The size of the file. */
     private final long size;
 
+    /**
+     * Regions identified by coderec in the binary.
+     * Each {@link CoderecParser.CodeRegion} records
+     * an inclusive start offset, exclusive end offset,
+     * the region length, and a tag indicating the type.
+     * Used to construct a CODE_REGION_VECTOR representation.
+     */
+    private final List<CoderecParser.CodeRegion> codeRegions;
 
     /**
      * Reads the given {@link MultipartFile}, writes it to a temporary file,
-     * parses it into an {@link ElfFile}, computes its SHA-256 hash, and
-     * populates this wrapper’s fields accordingly.
+     * parses it into an {@link ElfFile}, computes its SHA-256 hash,
+     * invokes the provided {@link CoderecParser} to extract code regions,
+     * and populates this wrapper’s fields accordingly.
      *
-     * @param file the uploaded ELF file
-     * @throws FileProcessingException if any I/O or parsing error occurs, or if the original filename is missing
+     * @param file   the uploaded ELF file
+     * @param parser the CoderecParser used to analyze code regions in the binary
+     * @throws FileProcessingException if any I/O, parsing, or external analysis error occurs,
+     *                                 or if the original filename is missing
      */
-    public ElfWrapper(MultipartFile file) {
-        String originalName = file.getOriginalFilename();
-        if (originalName == null) {
-            throw new FileProcessingException("Original filename is missing", null);
-        }
-
-        byte[] content;
+    public ElfWrapper(MultipartFile file , CoderecParser parser) {
         try {
-            content = file.getBytes();
-        } catch (IOException e) {
-            throw new FileProcessingException("Failed to read uploaded file bytes", e);
-        }
+            byte[] content = file.getBytes();
+            this.filename = file.getOriginalFilename();
+            if (this.filename == null) {
+                throw new FileProcessingException("Missing original filename", null);
+            }
 
-        Path tempDir;
-        try {
-            tempDir = Files.createTempDirectory("elf-upload-");
-        } catch (IOException e) {
-            throw new FileProcessingException("Failed to create temp directory", e);
-        }
-
-        Path tempFile = tempDir.resolve(originalName);
-        try {
+            Path tempFile = Files.createTempDirectory("elf-").resolve(this.filename);
             Files.write(tempFile, content);
-            this.filename = originalName;
+
+            this.size = Files.size(tempFile);
             this.elfFile = ElfFile.from(tempFile.toFile());
             this.sha256 = computeSha256(content);
-            this.size = size(tempFile);
-        } catch (Exception e) {
-            throw new FileProcessingException("Failed to parse ELF from " + originalName, e);
-        } finally {
+            this.codeRegions = parser.parse(tempFile);
+
+            Files.deleteIfExists(tempFile);
+            Files.deleteIfExists(tempFile);
+
             try {
-                Files.deleteIfExists(tempFile);
-                Files.deleteIfExists(tempDir);
+                Files.delete(tempFile.getParent());
             } catch (IOException ignored) {}
+        } catch (Exception e) {
+            throw new FileProcessingException("Failed to wrap ELF: " + e.getMessage(), e);
         }
     }
 }
