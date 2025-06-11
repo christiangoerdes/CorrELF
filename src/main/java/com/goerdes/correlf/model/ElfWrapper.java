@@ -5,11 +5,13 @@ import com.goerdes.correlf.components.CoderecParser.CodeRegion;
 import com.goerdes.correlf.exception.FileProcessingException;
 import lombok.Data;
 import net.fornwall.jelf.ElfFile;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -57,6 +59,9 @@ public class ElfWrapper {
      */
     private final List<CodeRegion> codeRegions;
 
+    @Value("${coderec.enabled}")
+    private static boolean coderecEnabled;
+
     private ElfWrapper(String filename, ElfFile elfFile, String sha256, long size, List<CodeRegion> codeRegions) {
         this.filename = filename;
         this.elfFile  = elfFile;
@@ -88,7 +93,10 @@ public class ElfWrapper {
             Path tempFile = Files.createTempDirectory("elf-").resolve(filename);
             Files.write(tempFile, content);
 
-            List<CodeRegion> codeRegions = parser.parseSingle(tempFile);
+            List<CodeRegion> codeRegions = new ArrayList<>();
+
+            if(coderecEnabled)
+                parser.parseSingle(tempFile);
 
             Path tempDir = tempFile.getParent();
             Files.deleteIfExists(tempFile);
@@ -116,7 +124,7 @@ public class ElfWrapper {
             throw new FileProcessingException("Missing original filename", null);
         }
 
-        byte[] content = null;
+        byte[] content;
         try {
             content = file.getBytes();
         } catch (IOException e) {

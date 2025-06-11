@@ -1,6 +1,7 @@
 package com.goerdes.correlf.services;
 
 import com.goerdes.correlf.components.CoderecParser;
+import com.goerdes.correlf.components.CoderecParser.CodeRegion;
 import com.goerdes.correlf.components.ElfHandler;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.FileRepo;
@@ -10,6 +11,7 @@ import com.goerdes.correlf.model.FileComparison;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -41,6 +41,9 @@ public class FileAnalysisService {
     private final FileRepo fileRepo;
     private final ElfHandler elfHandler;
     private final CoderecParser coderecParser;
+
+    @Value("${coderec.enabled}")
+    private boolean coderecEnabled;
 
     /**
      * Parse and store the uploaded file (if new), then compare it
@@ -121,8 +124,10 @@ public class FileAnalysisService {
             return;
         }
 
-        Map<Path, List<CoderecParser.CodeRegion>> batchRegions =
-                coderecParser.parseMultiple(elfPaths);
+        Map<Path, List<CodeRegion>> batchRegions = new HashMap<>();
+
+        if (coderecEnabled)
+            coderecParser.parseMultiple(elfPaths);
 
         for (Path elfPath : elfPaths) {
             byte[] bytes = Files.readAllBytes(elfPath);
@@ -144,16 +149,19 @@ public class FileAnalysisService {
         cleanupDir(tempDir);
     }
 
-    /** Recursively deletes the directory and its contents. */
+    /**
+     * Recursively deletes the directory and its contents.
+     */
     private void cleanupDir(Path dir) {
-        try {
-            Files.walk(dir)
-                    .sorted(Comparator.reverseOrder())
+        try (Stream<Path> stream = Files.walk(dir)) {
+            stream.sorted(Comparator.reverseOrder())
                     .forEach(p -> {
-                        try { Files.deleteIfExists(p); }
-                        catch (IOException ignored) {}
+                        try {
+                            Files.deleteIfExists(p);
+                        } catch (IOException ignored) {
+                        }
                     });
-        } catch (IOException ignored) { }
+        } catch (IOException ignored) {}
     }
 
 }
