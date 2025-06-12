@@ -1,8 +1,8 @@
 package com.goerdes.correlf.services;
 
-import com.goerdes.correlf.components.CoderecParser;
-import com.goerdes.correlf.components.CoderecParser.CodeRegion;
+import com.goerdes.correlf.components.Coderec;
 import com.goerdes.correlf.components.ElfHandler;
+import com.goerdes.correlf.components.ElfWrapperFactory;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.exception.FileProcessingException;
@@ -18,10 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.stream.Stream;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -40,7 +37,8 @@ public class FileAnalysisService {
     private final FileComparisonService comparisonService;
     private final FileRepo fileRepo;
     private final ElfHandler elfHandler;
-    private final CoderecParser coderecParser;
+    private final ElfWrapperFactory factory;
+    private final Coderec coderec;
 
     @Value("${coderec.enabled}")
     private boolean coderecEnabled;
@@ -57,13 +55,13 @@ public class FileAnalysisService {
     public List<FileComparison> analyze(MultipartFile upload) {
         log.info("Analyzing: {}", upload.getOriginalFilename());
 
-        ElfWrapper elfWrapper = ElfWrapper.of(upload, coderecParser);
+        ElfWrapper elfWrapper = factory.create(upload);
 
         List<FileEntity> stored = fileRepo.findAll();
 
-        if (fileRepo.findBySha256(elfWrapper.getSha256()).stream()
+        if (fileRepo.findBySha256(elfWrapper.sha256()).stream()
                 .map(FileEntity::getFilename)
-                .noneMatch(requireNonNull(elfWrapper.getFilename())::equals)
+                .noneMatch(requireNonNull(elfWrapper.filename())::equals)
         ) {
             fileRepo.save(elfHandler.createEntity(elfWrapper));
         }
@@ -82,8 +80,8 @@ public class FileAnalysisService {
      */
     @Transactional
     public FileComparison compare(MultipartFile file1, MultipartFile file2) {
-        FileEntity e1 = elfHandler.createEntity(ElfWrapper.of(file1, coderecParser));
-        FileEntity e2 = elfHandler.createEntity(ElfWrapper.of(file2, coderecParser));
+        FileEntity e1 = elfHandler.createEntity(factory.create(file1));
+        FileEntity e2 = elfHandler.createEntity(factory.create(file2));
 
         if (e1.getSha256().equals(e2.getSha256())) {
             return new FileComparison() {{
@@ -96,72 +94,51 @@ public class FileAnalysisService {
     }
 
     /**
-     * Imports all ELF binaries contained in the given ZIP archive into the database,
-     * but does only one invocation of coderec for the entire batch.
+     * Imports all ELF binaries contained in the given ZIP archive into the database.
+     * <p>
+     * Each non-directory entry is read into memory, wrapped in a
+     * {@code ByteArrayMultipartFile}, and persisted via {@link #addToDB(MultipartFile)}.
+     * Errors for individual entries are logged but do not interrupt processing
+     * of the remaining entries.
+     *
+     * @param archive the ZIP file containing one or more ELF binaries
+     * @throws IOException if an I/O error occurs while reading the archive
      */
     public void importZipArchive(MultipartFile archive) throws IOException {
         requireNonNull(archive, "Archive must not be null");
-        log.info("Importing ZIP archive: {}", archive.getOriginalFilename());
 
-        Path tempDir = Files.createTempDirectory("elf-batch-");
-        List<Path> elfPaths = new ArrayList<>();
+        log.info("Importing ZIP archive: {}", archive.getOriginalFilename());
 
         try (ZipInputStream zis = new ZipInputStream(archive.getInputStream())) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (!entry.isDirectory()) {
-                    Path out = tempDir.resolve(entry.getName());
-                    Files.createDirectories(out.getParent());
-                    Files.write(out, zis.readAllBytes());
-                    elfPaths.add(out);
+                    try {
+                        addToDB(new MockMultipartFile(
+                                entry.getName(),
+                                entry.getName(),
+                                "application/octet-stream",
+                                zis.readAllBytes()
+                        ));
+                    } catch (FileProcessingException e) {
+                        log.error("Failed to process entry '{}': {}", entry.getName(), e.getMessage());
+                    }
                 }
                 zis.closeEntry();
             }
         }
-
-        if (elfPaths.isEmpty()) {
-            cleanupDir(tempDir);
-            return;
-        }
-
-        Map<Path, List<CodeRegion>> batchRegions = new HashMap<>();
-
-        if (coderecEnabled)
-            coderecParser.parseMultiple(elfPaths);
-
-        for (Path elfPath : elfPaths) {
-            byte[] bytes = Files.readAllBytes(elfPath);
-            MultipartFile mf = new MockMultipartFile(
-                    elfPath.getFileName().toString(),
-                    elfPath.getFileName().toString(),
-                    "application/octet-stream",
-                    bytes
-            );
-
-            ElfWrapper wrapper = ElfWrapper.of(mf, batchRegions.getOrDefault(elfPath, List.of()));
-
-            if (fileRepo.findBySha256(wrapper.getSha256()).isEmpty()) {
-                FileEntity entity = elfHandler.createEntity(wrapper);
-                fileRepo.save(entity);
-            }
-        }
-
-        cleanupDir(tempDir);
     }
 
     /**
-     * Recursively deletes the directory and its contents.
+     * Parses the given uploaded ELF file, constructs its corresponding
+     * FileEntity (including SHA-256 and extracted representations), and
+     * persists it to the database.
+     *
+     * @param file the ELF file received as a MultipartFile
+     * @throws FileProcessingException if parsing or representation extraction fails
      */
-    private void cleanupDir(Path dir) {
-        try (Stream<Path> stream = Files.walk(dir)) {
-            stream.sorted(Comparator.reverseOrder())
-                    .forEach(p -> {
-                        try {
-                            Files.deleteIfExists(p);
-                        } catch (IOException ignored) {
-                        }
-                    });
-        } catch (IOException ignored) {}
+    public void addToDB(MultipartFile file) {
+        fileRepo.save(elfHandler.createEntity(factory.create(file)));
     }
 
 }
