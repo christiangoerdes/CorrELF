@@ -2,19 +2,19 @@
 
 ## Setup
 
+### JNA-based `coderec` library integration
 
-### [coderec](https://github.com/vobst/coderec) integration
+1. Build the JNA library:
+   ```bash
+   git clone https://github.com/christiangoerdes/coderec.git
+   cd coderec
+   cargo build --release
+   ```
+2. Copy the built lib into the project resources
 
-* Place the platform‐specific [`coderec`](https://github.com/vobst/coderec) executable under
-
-    ```
-    src/main/resources/coderec/coderec    # Linux/macOS (chmod +x)  
-    src/main/resources/coderec/coderec.exe  # Windows  
-    ```
-  
-* Configure the path in `src/main/resources/application.properties`:
-
-     ```properties
-     coderec.location=classpath:coderec/coderec       # Linux/macOS
-     coderec.location=classpath:coderec/coderec.exe   # Windows
-     ```
+3. Point Spring at the library in `application.properties`:
+   ```properties
+   coderec.location=classpath:coderec/coderec_jna.dll       # Windows
+   coderec.location=classpath:coderec/libcoderec_jna.so     # Linux
+   coderec.location=classpath:coderec/libcoderec_jna.dylib  # macOS
+   ```
