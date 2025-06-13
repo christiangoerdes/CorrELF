@@ -4,82 +4,42 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goerdes.correlf.exception.FileProcessingException;
-import com.sun.jna.*;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 
 /**
- * JNA binding for coderec_jni.dll, loaded from application.properties
+ * Entry point for invoking the native coderec analyzer via JNI.
+ * <p>
+ * Delegates to {@link CoderecJni#detectFile(String)} to get the raw JSON
+ * output, then parses and returns a list of {@link CodeRegion} entries.
+ * </p>
  */
 @Component
+@RequiredArgsConstructor
 public class Coderec {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private interface Lib extends Library {
-        /** extern "C" fn coderec_detect_file(path: *const c_char) -> *mut c_char */
-        Pointer coderec_detect_file(String path);
-        /** extern "C" fn coderec_free_string(s: *mut c_char) */
-        void coderec_free_string(Pointer s);
-    }
-
-    private final Lib lib;
+    /** JNI bridge to the coderec native library. */
+    private final CoderecJni coderecJni;
 
     /**
-     * @param coderecLocation Spring Resource location (e.g. classpath:coderec/coderec_jni.dll)
+     * Analyze the given ELF binary and return its detected code regions.
+     *
+     * @param elfPath filesystem path to the ELF file to analyze
+     * @return list of {@link CodeRegion} entries extracted from coderec output
+     * @throws FileProcessingException if the native call fails or the JSON cannot be parsed
      */
-    public Coderec(@Value("${coderec.location}") Resource coderecLocation) {
-        try {
-            Path tmpFile = Files.createTempFile("coderec_jni", getExtension(coderecLocation));
-            tmpFile.toFile().deleteOnExit();
-            try (InputStream in = coderecLocation.getInputStream()) {
-                Files.copy(in, tmpFile, StandardCopyOption.REPLACE_EXISTING);
-            }
-            this.lib = Native.load(tmpFile.toAbsolutePath().toString(), Lib.class);
-        } catch (IOException e) {
-            throw new ExceptionInInitializerError("Failed to load coderec native library: " + e.getMessage());
-        }
-    }
-
-    /** Returns parsed regions for a single file. */
     public List<CodeRegion> analyze(Path elfPath) {
-        String json = detectFile(elfPath.toString());
+        String json = coderecJni.detectFile(elfPath.toString());
         if (json == null) {
             throw new FileProcessingException("coderec failed to analyze " + elfPath, null);
         }
         return extractRegions(parseRawJson(json));
-    }
-
-    /**
-     * Analyze a single file. Returns JSON string or null on error.
-     */
-    private String detectFile(String filePath) {
-        Pointer resultPtr = lib.coderec_detect_file(filePath);
-        if (resultPtr == null) {
-            return null;
-        }
-        String json = resultPtr.getString(0);
-        lib.coderec_free_string(resultPtr);
-        return json;
-    }
-
-    private String getExtension(Resource resource) {
-        try {
-            String filename = resource.getFilename();
-            int idx = (filename != null) ? filename.lastIndexOf('.') : -1;
-            return (idx >= 0) ? filename.substring(idx) : ".dll";
-        } catch (Exception e) {
-            return ".dll";
-        }
     }
 
     /** Deserialize a single JSON blob into a raw Map. */
@@ -91,7 +51,7 @@ public class Coderec {
         }
     }
 
-    /** Convert raw JSON map into a List<CodeRegion>. */
+    /** Convert the raw JSON map into a list of {@link CodeRegion} instances. */
     @SuppressWarnings("unchecked")
     private List<CodeRegion> extractRegions(Map<String,Object> raw) {
         List<List<Object>> rr = (List<List<Object>>) raw.get("range_results");
@@ -107,9 +67,14 @@ public class Coderec {
         }).toList();
     }
 
+
     /**
-     * Represents a region in the binary that coderec classified,
-     * with start, end, byte-length, and the tag
+     * A contiguous region in the binary classified by coderec.
+     *
+     * @param start  inclusive byte offset where this region begins
+     * @param end    exclusive byte offset where this region ends
+     * @param length total number of bytes in the region
+     * @param tag    classifier tag
      */
     public record CodeRegion(long start, long end, long length, String tag) {}
 }

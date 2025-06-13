@@ -8,5 +8,4 @@
 /data/random-fragments
 /src/test/resources/all_elfs.zip
 /src/test/resources/*
-/src/main/resources/coderec/coderec
-/src/main/resources/coderec/coderec.exe
+/src/main/resources/coderec/*

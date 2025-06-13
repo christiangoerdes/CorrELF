@@ -138,6 +138,7 @@ public class FileAnalysisService {
      * @throws FileProcessingException if parsing or representation extraction fails
      */
     public void addToDB(MultipartFile file) {
+        log.info("Adding file {}", file.getOriginalFilename());
         fileRepo.save(elfHandler.createEntity(factory.create(file)));
     }
 

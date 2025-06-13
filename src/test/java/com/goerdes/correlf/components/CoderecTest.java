@@ -11,10 +11,10 @@ import java.util.Objects;
 public class CoderecTest {
 
     @Autowired
-    private Coderec coderec;
+    private CoderecJni coderec;
 
     @Test
     public void testCoderecIntegration() throws Exception {
-        System.out.println(coderec.analyze(Paths.get(Objects.requireNonNull(getClass().getClassLoader().getResource("busybox")).toURI())));
+        System.out.println(coderec.detectFile(Paths.get(Objects.requireNonNull(getClass().getClassLoader().getResource("busybox")).toURI()).toString()));
     }
 }
