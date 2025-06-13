@@ -40,7 +40,14 @@ public class ElfWrapperFactory {
 
             byte[] content = file.getBytes();
             String sha256   = ByteUtils.computeSha256(content);
-            ElfFile elfFile = ElfFile.from(content);
+
+            ElfFile elfFile = null;
+            boolean parsed = true;
+            try {
+                elfFile = ElfFile.from(content);
+            } catch (Exception ignored) {
+                parsed = false;
+            }
             long size       = file.getSize();
 
             List<Coderec.CodeRegion> regions = new ArrayList<>();
@@ -57,7 +64,7 @@ public class ElfWrapperFactory {
                         .forEach(p -> { try { Files.deleteIfExists(p); } catch(Exception ignored){} });
             }
 
-            return new ElfWrapper(filename, elfFile, sha256, size, regions);
+            return new ElfWrapper(filename, elfFile, parsed, sha256, size, regions);
 
         } catch (IOException e) {
             throw new FileProcessingException("I/O error during ELF wrap: " + e.getMessage(), e);

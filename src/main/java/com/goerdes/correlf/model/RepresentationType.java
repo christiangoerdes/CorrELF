@@ -16,5 +16,7 @@ public enum RepresentationType {
      * A fixed‐length vector of normalized sizes (as a fraction of total file size)
      * for key ELF sections: .text, .rodata, .data, .bss, .symtab, and .shstrtab.
      */
-    SECTION_SIZE_VECTOR
+    SECTION_SIZE_VECTOR,
+
+    CODE_REGION_LIST
 }

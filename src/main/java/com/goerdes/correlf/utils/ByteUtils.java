@@ -1,10 +1,16 @@
 package com.goerdes.correlf.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.goerdes.correlf.components.Coderec;
 import com.goerdes.correlf.exception.FileProcessingException;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
@@ -12,6 +18,9 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
  * Utility methods for packing and unpacking primitives to byte arrays.
  */
 public final class ByteUtils {
+
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
      * Packs the given array of doubles into a byte array using little‐endian order.
@@ -102,6 +111,28 @@ public final class ByteUtils {
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
             throw new FileProcessingException("SHA-256 algorithm not available", e);
+        }
+    }
+
+    public static byte[] serializeCodeRegions(List<Coderec.CodeRegion> regs) {
+        try {
+            return MAPPER.writeValueAsBytes(regs);
+        } catch (JsonProcessingException e) {
+            throw new FileProcessingException("Fehler beim Serialisieren der CodeRegions", e);
+        }
+    }
+
+    public static List<Coderec.CodeRegion> deserializeCodeRegions(byte[] data) {
+        try {
+            return MAPPER.readValue(
+                    data,
+                    new TypeReference<>() {
+                    }
+            );
+        } catch (IOException e) {
+            throw new FileProcessingException(
+                    "Error deserializing CodeRegion list", e
+            );
         }
     }
 }

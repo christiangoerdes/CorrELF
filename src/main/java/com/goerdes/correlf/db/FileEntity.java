@@ -31,6 +31,9 @@ public class FileEntity {
     @Column(nullable = false)
     private String sha256;
 
+    @Column(nullable = false)
+    private boolean parsingSuccessful;
+
     @OneToMany(
             mappedBy = "file",
             cascade = ALL,

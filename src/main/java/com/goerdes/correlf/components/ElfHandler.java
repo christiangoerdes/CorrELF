@@ -4,6 +4,7 @@ import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.RepresentationEntity;
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.ElfWrapper;
+import com.goerdes.correlf.model.RepresentationType;
 import lombok.RequiredArgsConstructor;
 import net.fornwall.jelf.*;
 import org.springframework.stereotype.Component;
@@ -15,8 +16,7 @@ import java.util.stream.IntStream;
 
 import static com.goerdes.correlf.components.MinHashProvider.MINHASH_DICT_SIZE;
 import static com.goerdes.correlf.model.RepresentationType.*;
-import static com.goerdes.correlf.utils.ByteUtils.packDoublesToBytes;
-import static com.goerdes.correlf.utils.ByteUtils.packIntsToBytes;
+import static com.goerdes.correlf.utils.ByteUtils.*;
 import static java.util.AbstractMap.SimpleEntry;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -40,29 +40,37 @@ public class ElfHandler {
         FileEntity entity = FileEntity.builder()
                 .filename(elfWrapper.filename())
                 .sha256(elfWrapper.sha256())
+                .parsingSuccessful(elfWrapper.parsingSuccessful())
                 .build();
 
-        ElfFile elfFile = elfWrapper.elfFile();
+        if (elfWrapper.parsingSuccessful()) {
+            ElfFile elfFile = elfWrapper.elfFile();
 
-        entity.addRepresentation(new RepresentationEntity() {{
-            setType(ELF_HEADER_VECTOR);
-            setData(packDoublesToBytes(extractHeaderVector(elfFile)));
+            entity.addRepresentation(new RepresentationEntity() {{
+                setType(ELF_HEADER_VECTOR);
+                setData(packDoublesToBytes(extractHeaderVector(elfFile)));
+                setFile(entity);
+            }});
+
+
+            entity.addRepresentation(new RepresentationEntity() {{
+                setType(STRING_MINHASH);
+                setData(packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(extractStrings(elfFile)))));
+                setFile(entity);
+            }});
+
+            entity.addRepresentation(new RepresentationEntity() {{
+                setType(SECTION_SIZE_VECTOR);
+                setData(packDoublesToBytes(buildSectionSizeVector(elfFile, elfWrapper.size())));
+                setFile(entity);
+            }});
+        }
+
+        entity.addRepresentation(new RepresentationEntity(){{
+            setType(RepresentationType.CODE_REGION_LIST);
+            setData(serializeCodeRegions(elfWrapper.codeRegions()));  // hier wird Deine Liste serialized
             setFile(entity);
         }});
-
-
-        entity.addRepresentation(new RepresentationEntity() {{
-            setType(STRING_MINHASH);
-            setData(packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(extractStrings(elfFile)))));
-            setFile(entity);
-        }});
-
-        entity.addRepresentation(new RepresentationEntity() {{
-            setType(SECTION_SIZE_VECTOR);
-            setData(packDoublesToBytes(buildSectionSizeVector(elfWrapper)));
-            setFile(entity);
-        }});
-
 
         // debugPrint(elfFile);
 
@@ -74,12 +82,11 @@ public class ElfHandler {
      * [".text", ".rodata", ".data", ".bss", ".symtab", ".shstrtab"].
      * Missing sections yield 0.0.
      *
-     * @param elfWrapper an ElfWrapper with parsed ElfFile and its total size
+     * @param elf the parsed ELF file
      * @return a double[6] of (sectionSize / totalSize)
      * @throws ElfException if any section cannot be read
      */
-    public static double[] buildSectionSizeVector(ElfWrapper elfWrapper) throws ElfException {
-        ElfFile elfFile = elfWrapper.elfFile();
+    public static double[] buildSectionSizeVector(ElfFile elf, long size) throws ElfException {
 
         Map<String, Integer> idxMap = Map.of(
                 ".text",0,  // executable instructions
@@ -90,8 +97,8 @@ public class ElfHandler {
                 ".shstrtab",    5   // section-header string table
         );
 
-        Map<String, Long> sectionSizeMap = IntStream.range(0, elfFile.e_shnum)
-                .mapToObj(elfFile::getSection)
+        Map<String, Long> sectionSizeMap = IntStream.range(0, elf.e_shnum)
+                .mapToObj(elf::getSection)
                 .map(section -> (section.header.getName() == null)
                         ? null
                         : new AbstractMap.SimpleEntry<>(section.header.getName().trim(), section.header.sh_size))
@@ -104,7 +111,7 @@ public class ElfHandler {
 
         double[] sectionSizes = new double[idxMap.size()];
         Arrays.fill(sectionSizes, 0.0);
-        idxMap.forEach((name, idx) -> sectionSizes[idx] = (double) sectionSizeMap.getOrDefault(name, 0L) / (double) elfWrapper.size());
+        idxMap.forEach((name, idx) -> sectionSizes[idx] = (double) sectionSizeMap.getOrDefault(name, 0L) / (double) size);
 
         return sectionSizes;
     }
@@ -177,6 +184,12 @@ public class ElfHandler {
         }
         return tokenSet;
     }
+
+
+
+
+
+    // ---------------------------- DEBUG ----------------------------
 
     private static void printStrings(ByteBuffer buf) {
         System.out.println("    String-Table:");
