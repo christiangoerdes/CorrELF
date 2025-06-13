@@ -3,10 +3,9 @@
 /target/
 /test/
 /data/builds.zip
+/data/buildroot
 /data/all_elfs.zip
+/data/random-fragments
 /src/test/resources/all_elfs.zip
-/src/test/resources/busybox
-/src/test/resources/dropbear
-/src/test/resources/busybox_2
-/src/test/resources/busybox_arm
-/src/test/resources/busybox_x86
+/src/test/resources/*
+/src/main/resources/coderec/*

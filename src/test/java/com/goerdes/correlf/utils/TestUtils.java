@@ -1,4 +1,4 @@
-package com.goerdes.correlf;
+package com.goerdes.correlf.utils;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.web.MockMultipartFile;

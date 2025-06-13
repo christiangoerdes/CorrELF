@@ -38,11 +38,11 @@ public class ElfHandler {
      */
     public FileEntity createEntity(ElfWrapper elfWrapper) throws FileProcessingException {
         FileEntity entity = FileEntity.builder()
-                .filename(elfWrapper.getFilename())
-                .sha256(elfWrapper.getSha256())
+                .filename(elfWrapper.filename())
+                .sha256(elfWrapper.sha256())
                 .build();
 
-        ElfFile elfFile = elfWrapper.getElfFile();
+        ElfFile elfFile = elfWrapper.elfFile();
 
         entity.addRepresentation(new RepresentationEntity() {{
             setType(ELF_HEADER_VECTOR);
@@ -79,7 +79,7 @@ public class ElfHandler {
      * @throws ElfException if any section cannot be read
      */
     public static double[] buildSectionSizeVector(ElfWrapper elfWrapper) throws ElfException {
-        ElfFile elfFile = elfWrapper.getElfFile();
+        ElfFile elfFile = elfWrapper.elfFile();
 
         Map<String, Integer> idxMap = Map.of(
                 ".text",0,  // executable instructions
@@ -104,7 +104,7 @@ public class ElfHandler {
 
         double[] sectionSizes = new double[idxMap.size()];
         Arrays.fill(sectionSizes, 0.0);
-        idxMap.forEach((name, idx) -> sectionSizes[idx] = (double) sectionSizeMap.getOrDefault(name, 0L) / (double) elfWrapper.getSize());
+        idxMap.forEach((name, idx) -> sectionSizes[idx] = (double) sectionSizeMap.getOrDefault(name, 0L) / (double) elfWrapper.size());
 
         return sectionSizes;
     }

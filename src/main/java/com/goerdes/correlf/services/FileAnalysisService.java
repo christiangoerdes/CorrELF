@@ -1,6 +1,8 @@
 package com.goerdes.correlf.services;
 
+import com.goerdes.correlf.components.Coderec;
 import com.goerdes.correlf.components.ElfHandler;
+import com.goerdes.correlf.components.ElfWrapperFactory;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.exception.FileProcessingException;
@@ -9,6 +11,7 @@ import com.goerdes.correlf.model.FileComparison;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +37,11 @@ public class FileAnalysisService {
     private final FileComparisonService comparisonService;
     private final FileRepo fileRepo;
     private final ElfHandler elfHandler;
+    private final ElfWrapperFactory factory;
+    private final Coderec coderec;
+
+    @Value("${coderec.enabled}")
+    private boolean coderecEnabled;
 
     /**
      * Parse and store the uploaded file (if new), then compare it
@@ -47,12 +55,13 @@ public class FileAnalysisService {
     public List<FileComparison> analyze(MultipartFile upload) {
         log.info("Analyzing: {}", upload.getOriginalFilename());
 
-        ElfWrapper elfWrapper = new ElfWrapper(upload);
+        ElfWrapper elfWrapper = factory.create(upload);
+
         List<FileEntity> stored = fileRepo.findAll();
 
-        if (fileRepo.findBySha256(elfWrapper.getSha256()).stream()
+        if (fileRepo.findBySha256(elfWrapper.sha256()).stream()
                 .map(FileEntity::getFilename)
-                .noneMatch(elfWrapper.getFilename()::equals)
+                .noneMatch(requireNonNull(elfWrapper.filename())::equals)
         ) {
             fileRepo.save(elfHandler.createEntity(elfWrapper));
         }
@@ -71,8 +80,8 @@ public class FileAnalysisService {
      */
     @Transactional
     public FileComparison compare(MultipartFile file1, MultipartFile file2) {
-        FileEntity e1 = elfHandler.createEntity(new ElfWrapper(file1));
-        FileEntity e2 = elfHandler.createEntity(new ElfWrapper(file2));
+        FileEntity e1 = elfHandler.createEntity(factory.create(file1));
+        FileEntity e2 = elfHandler.createEntity(factory.create(file2));
 
         if (e1.getSha256().equals(e2.getSha256())) {
             return new FileComparison() {{
@@ -129,7 +138,8 @@ public class FileAnalysisService {
      * @throws FileProcessingException if parsing or representation extraction fails
      */
     public void addToDB(MultipartFile file) {
-        fileRepo.save(elfHandler.createEntity(new ElfWrapper(file)));
+        log.info("Adding file {}", file.getOriginalFilename());
+        fileRepo.save(elfHandler.createEntity(factory.create(file)));
     }
 
 }
