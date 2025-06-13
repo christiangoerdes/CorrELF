@@ -12,8 +12,8 @@
    cargo build --release
    ```
 2. Place the compiled JNI library under `src/main/resources/coderec/`:
-   ```properties
-   coderec/coderec_jna.dll       # Windows
-   coderec/coderec_jna.dylib     # macOS
-   coderec/libcoderec_jna.so     # Linux
+   ```
+   coderec/coderec_jni.dll       # Windows
+   coderec/coderec_jni.dylib     # macOS
+   coderec/libcoderec_jni.so     # Linux
    ```
