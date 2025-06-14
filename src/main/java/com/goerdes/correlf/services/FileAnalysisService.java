@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -106,25 +107,38 @@ public class FileAnalysisService {
      */
     public void importZipArchive(MultipartFile archive) throws IOException {
         requireNonNull(archive, "Archive must not be null");
-
         log.info("Importing ZIP archive: {}", archive.getOriginalFilename());
 
+        List<MockMultipartFile> files = new ArrayList<>();
         try (ZipInputStream zis = new ZipInputStream(archive.getInputStream())) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (!entry.isDirectory()) {
-                    try {
-                        addToDB(new MockMultipartFile(
-                                entry.getName(),
-                                entry.getName(),
-                                "application/octet-stream",
-                                zis.readAllBytes()
-                        ));
-                    } catch (FileProcessingException e) {
-                        log.error("Failed to process entry '{}': {}", entry.getName(), e.getMessage());
-                    }
+                    files.add(new MockMultipartFile(
+                            entry.getName(),
+                            entry.getName(),
+                            "application/octet-stream",
+                            zis.readAllBytes()
+                    ));
                 }
                 zis.closeEntry();
+            }
+        }
+
+        int total = files.size();
+        int nextLogThreshold = 5;
+        log.info("Processing {} files", total);
+        for (int i = 0; i < total; i++) {
+            MultipartFile file = files.get(i);
+            int percent = (i * 100) / total;
+            if (percent >= nextLogThreshold) {
+                log.info("  → {}% done. ({} of {} files)", percent, i, total);
+                nextLogThreshold += 5;
+            }
+            try {
+                addToDB(file);
+            } catch (FileProcessingException e) {
+                log.error("Failed to process '{}': {}", file.getOriginalFilename(), e.getMessage());
             }
         }
     }
@@ -138,7 +152,6 @@ public class FileAnalysisService {
      * @throws FileProcessingException if parsing or representation extraction fails
      */
     public void addToDB(MultipartFile file) {
-        log.info("Adding file {}", file.getOriginalFilename());
         fileRepo.save(elfHandler.createEntity(factory.create(file)));
     }
 
