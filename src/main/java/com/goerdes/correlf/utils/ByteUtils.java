@@ -19,7 +19,6 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
  */
 public final class ByteUtils {
 
-
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
@@ -114,6 +113,8 @@ public final class ByteUtils {
         }
     }
 
+
+
     public static byte[] serializeCodeRegions(List<Coderec.CodeRegion> regs) {
         try {
             return MAPPER.writeValueAsBytes(regs);
@@ -135,5 +136,6 @@ public final class ByteUtils {
             );
         }
     }
+
 }
 

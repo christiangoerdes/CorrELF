@@ -68,7 +68,7 @@ public class ElfHandler {
 
         entity.addRepresentation(new RepresentationEntity(){{
             setType(RepresentationType.CODE_REGION_LIST);
-            setData(serializeCodeRegions(elfWrapper.codeRegions()));  // hier wird Deine Liste serialized
+            setData(serializeCodeRegions(elfWrapper.codeRegions()));
             setFile(entity);
         }});
 
