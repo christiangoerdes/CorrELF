@@ -42,7 +42,9 @@ public class FileComparisonService {
     public FileComparison compareFiles(FileEntity referenceFile, FileEntity targetFile) {
         Map<RepresentationType, Double> comparisons = new HashMap<>();
 
-        if(referenceFile.isParsingSuccessful() && targetFile.isParsingSuccessful()) {
+        boolean bothParsed = referenceFile.isParsingSuccessful() && targetFile.isParsingSuccessful();
+
+        if(bothParsed) {
             double headerSim = getHeaderSim(referenceFile, targetFile);
             comparisons.put(ELF_HEADER_VECTOR, headerSim);
 
@@ -56,6 +58,7 @@ public class FileComparisonService {
         double codeRegionSim =
                 computeJaccardScore(deserializeCodeRegions(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData()),
                         deserializeCodeRegions(targetFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData()));
+        comparisons.put(CODE_REGION_LIST, codeRegionSim);
 
         double simScore = comparisons.entrySet().stream()
                 .mapToDouble(e -> weights.getOrDefault(e.getKey(), 0.0) * e.getValue())
@@ -65,7 +68,7 @@ public class FileComparisonService {
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);
-            setSimilarityScore(codeRegionSim);
+            setSimilarityScore(bothParsed ? simScore : codeRegionSim);
         }};
     }
 

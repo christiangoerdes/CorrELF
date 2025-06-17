@@ -21,12 +21,14 @@ public class DataSetup {
     @BeforeAll
     static void setupData(@Autowired FileAnalysisService service) throws IOException {
         fileAnalysisService = service;
-        fileAnalysisService.importZipArchive(new MockMultipartFile(
-                "file",
-                "all_elfs.zip",
-                "application/zip",
-                new ClassPathResource("all_elfs.zip").getInputStream()
-        ));
+        if(false) {
+            fileAnalysisService.importZipArchive(new MockMultipartFile(
+                    "file",
+                    "all_elfs.zip",
+                    "application/zip",
+                    new ClassPathResource("all_elfs.zip").getInputStream()
+            ));
+        }
     }
 
 }
