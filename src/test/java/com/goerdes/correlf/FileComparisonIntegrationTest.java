@@ -2,7 +2,7 @@ package com.goerdes.correlf;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goerdes.correlf.model.FileComparison;
-import com.goerdes.correlf.utils.DataSetup;
+import com.goerdes.correlf.utils.Setup;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -14,7 +14,7 @@ import static com.goerdes.correlf.utils.TestUtils.getMockFile;
  * Integration tests for file comparison logic.
  */
 @SpringBootTest
-public class FileComparisonIntegrationTest extends DataSetup {
+public class FileComparisonIntegrationTest extends Setup {
 
     private final ObjectMapper mapper = new ObjectMapper();
 

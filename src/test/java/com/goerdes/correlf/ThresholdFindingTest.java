@@ -2,7 +2,7 @@ package com.goerdes.correlf;
 
 import com.goerdes.correlf.model.FileComparison;
 import com.goerdes.correlf.model.RepresentationType;
-import com.goerdes.correlf.utils.DataSetup;
+import com.goerdes.correlf.utils.Setup;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -12,7 +12,7 @@ import java.util.List;
 import static com.goerdes.correlf.utils.TestUtils.getMockFile;
 
 @SpringBootTest
-public class ThresholdFindingTest extends DataSetup {
+public class ThresholdFindingTest extends Setup {
 
     private double findThresholdByMinFamilySim(String familyKey, RepresentationType type) throws IOException {
         List<FileComparison> comparisons = fileAnalysisService.analyze(getMockFile(familyKey));

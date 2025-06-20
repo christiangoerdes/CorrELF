@@ -8,6 +8,7 @@ import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.ElfWrapper;
 import com.goerdes.correlf.model.FileComparison;
+import com.goerdes.correlf.model.RepresentationType;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -60,10 +62,7 @@ public class FileAnalysisService {
 
         List<FileEntity> stored = fileRepo.findAll();
 
-        if (fileRepo.findBySha256(elfWrapper.sha256()).stream()
-                .map(FileEntity::getFilename)
-                .noneMatch(requireNonNull(elfWrapper.filename())::equals)
-        ) {
+        if (fileRepo.findBySha256AndFilename(elfWrapper.sha256(), elfWrapper.filename()).isEmpty()) {
             fileRepo.save(elfHandler.createEntity(elfWrapper));
         }
 
@@ -105,7 +104,8 @@ public class FileAnalysisService {
      * @param archive the ZIP file containing one or more ELF binaries
      * @throws IOException if an I/O error occurs while reading the archive
      */
-    public void importZipArchive(MultipartFile archive) throws IOException {
+    @Transactional
+    public void importZipArchive(MultipartFile archive, List<RepresentationType> representationTypes) throws IOException {
         requireNonNull(archive, "Archive must not be null");
         log.info("Importing ZIP archive: {}", archive.getOriginalFilename());
 
@@ -136,7 +136,15 @@ public class FileAnalysisService {
                 nextLogThreshold += 5;
             }
             try {
-                addToDB(file);
+                ElfWrapper elfWrapper = factory.create(file, representationTypes);
+                Optional<FileEntity> fileEntity = fileRepo.findBySha256AndFilename(elfWrapper.sha256(),
+                        elfWrapper.filename());
+                if(fileEntity.isEmpty()) {
+                    addToDB(file);
+                } else {
+                    fileRepo.save(elfHandler.updateEntity(fileEntity.get(), elfWrapper, representationTypes));
+                }
+
             } catch (FileProcessingException e) {
                 log.error("Failed to process '{}': {}", file.getOriginalFilename(), e.getMessage());
             }

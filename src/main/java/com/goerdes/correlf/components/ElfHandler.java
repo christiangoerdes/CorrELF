@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import static com.goerdes.correlf.components.MinHashProvider.MINHASH_DICT_SIZE;
@@ -37,11 +38,7 @@ public class ElfHandler {
      * @return FileEntity with filename, sha256 and representations
      */
     public FileEntity createEntity(ElfWrapper elfWrapper) throws FileProcessingException {
-        FileEntity entity = FileEntity.builder()
-                .filename(elfWrapper.filename())
-                .sha256(elfWrapper.sha256())
-                .parsingSuccessful(elfWrapper.parsingSuccessful())
-                .build();
+        FileEntity entity = FileEntity.builder().filename(elfWrapper.filename()).sha256(elfWrapper.sha256()).parsingSuccessful(elfWrapper.parsingSuccessful()).build();
 
         if (elfWrapper.parsingSuccessful()) {
             ElfFile elfFile = elfWrapper.elfFile();
@@ -66,8 +63,8 @@ public class ElfHandler {
             }});
         }
 
-        entity.addRepresentation(new RepresentationEntity(){{
-            setType(RepresentationType.CODE_REGION_LIST);
+        entity.addRepresentation(new RepresentationEntity() {{
+            setType(CODE_REGION_LIST);
             setData(serializeCodeRegions(elfWrapper.codeRegions()));
             setFile(entity);
         }});
@@ -76,6 +73,47 @@ public class ElfHandler {
 
         return entity;
     }
+
+    /**
+     * Updates the specified representations on the existing FileEntity.
+     * If representationTypes is null or empty, all representations are updated.
+     */
+    public FileEntity updateEntity(
+            FileEntity entity, ElfWrapper elfWrapper,
+            List<RepresentationType> representationTypes
+    ) throws FileProcessingException {
+        boolean updateAll = representationTypes == null || representationTypes.isEmpty();
+
+        if (elfWrapper.parsingSuccessful()) {
+            ElfFile elfFile = elfWrapper.elfFile();
+
+            if (updateAll || representationTypes.contains(ELF_HEADER_VECTOR)) {
+                updateRep(entity, ELF_HEADER_VECTOR, () -> packDoublesToBytes(extractHeaderVector(elfFile)));
+            }
+
+            if (updateAll || representationTypes.contains(STRING_MINHASH)) {
+                updateRep(entity, STRING_MINHASH, () -> packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(extractStrings(elfFile)))));
+            }
+
+            if (updateAll || representationTypes.contains(SECTION_SIZE_VECTOR)) {
+                updateRep(entity, SECTION_SIZE_VECTOR, () -> packDoublesToBytes(buildSectionSizeVector(elfFile, elfWrapper.size())));
+            }
+        }
+
+        if (updateAll || representationTypes.contains(CODE_REGION_LIST)) {
+            updateRep(entity, CODE_REGION_LIST, () -> serializeCodeRegions(elfWrapper.codeRegions()));
+        }
+
+        return  entity;
+    }
+
+    /**
+     * Helper to find-and-set data for a given representation type.
+     */
+    private void updateRep(FileEntity entity, RepresentationType type, Supplier<byte[]> dataSupplier) {
+        entity.getRepresentations().stream().filter(r -> r.getType() == type).findFirst().ifPresent(r -> r.setData(dataSupplier.get()));
+    }
+
 
     /**
      * Returns a length-6 vector of normalized section sizes for the ELF:
@@ -89,25 +127,15 @@ public class ElfHandler {
     public static double[] buildSectionSizeVector(ElfFile elf, long size) throws ElfException {
 
         Map<String, Integer> idxMap = Map.of(
-                ".text",0,  // executable instructions
-                ".rodata",  1,  // read-only data (constants, literals)
-                ".data",    2,  // initialized writable data
-                ".bss",     3,  // uninitialized writable data (zero-initialized)
-                ".symtab",  4,  // symbol table
-                ".shstrtab",    5   // section-header string table
+                ".text", 0,     // executable instructions
+                ".rodata", 1,   // read-only data (constants, literals)
+                ".data", 2,     // initialized writable data
+                ".bss", 3,      // uninitialized writable data (zero-initialized)
+                ".symtab", 4,   // symbol table
+                ".shstrtab", 5  // section-header string table
         );
 
-        Map<String, Long> sectionSizeMap = IntStream.range(0, elf.e_shnum)
-                .mapToObj(elf::getSection)
-                .map(section -> (section.header.getName() == null)
-                        ? null
-                        : new AbstractMap.SimpleEntry<>(section.header.getName().trim(), section.header.sh_size))
-                .filter(entry -> entry != null && idxMap.containsKey(entry.getKey()))
-                .collect(toMap(
-                        SimpleEntry::getKey,
-                        SimpleEntry::getValue,
-                        (existing, replacement) -> existing
-                ));
+        Map<String, Long> sectionSizeMap = IntStream.range(0, elf.e_shnum).mapToObj(elf::getSection).map(section -> (section.header.getName() == null) ? null : new AbstractMap.SimpleEntry<>(section.header.getName().trim(), section.header.sh_size)).filter(entry -> entry != null && idxMap.containsKey(entry.getKey())).collect(toMap(SimpleEntry::getKey, SimpleEntry::getValue, (existing, replacement) -> existing));
 
         double[] sectionSizes = new double[idxMap.size()];
         Arrays.fill(sectionSizes, 0.0);
@@ -159,13 +187,7 @@ public class ElfHandler {
      * @return a List of non-empty strings found in all STRTAB sections
      */
     private static List<String> extractStrings(ElfFile elf) {
-        return range(0, elf.e_shnum)
-                .filter(i -> elf.getSection(i).header.sh_type == SHT_STRTAB && i != elf.e_shstrndx)
-                .mapToObj(i -> elf.getSection(i).getData())
-                .flatMap(raw -> Arrays.stream(new String(raw, StandardCharsets.ISO_8859_1).split("\0", -1)))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(toList());
+        return range(0, elf.e_shnum).filter(i -> elf.getSection(i).header.sh_type == SHT_STRTAB && i != elf.e_shstrndx).mapToObj(i -> elf.getSection(i).getData()).flatMap(raw -> Arrays.stream(new String(raw, StandardCharsets.ISO_8859_1).split("\0", -1))).map(String::trim).filter(s -> !s.isEmpty()).collect(toList());
     }
 
     /**
@@ -184,9 +206,6 @@ public class ElfHandler {
         }
         return tokenSet;
     }
-
-
-
 
 
     // ---------------------------- DEBUG ----------------------------
@@ -230,12 +249,7 @@ public class ElfHandler {
         System.out.println("Program Headers:");
         for (int i = 0; i < elfFile.e_phnum; i++) {
             ElfSegment ph = elfFile.getProgramHeader(i);
-            System.out.printf(
-                    "  [%2d] Type=0x%x Off=0x%x VAddr=0x%x PAddr=0x%x%n" +
-                            "       FileSz=0x%x MemSz=0x%x Flags=0x%x Align=0x%x%n",
-                    i, ph.p_type, ph.p_offset, ph.p_vaddr, ph.p_paddr,
-                    ph.p_filesz, ph.p_memsz, ph.p_flags, ph.p_align
-            );
+            System.out.printf("  [%2d] Type=0x%x Off=0x%x VAddr=0x%x PAddr=0x%x%n" + "       FileSz=0x%x MemSz=0x%x Flags=0x%x Align=0x%x%n", i, ph.p_type, ph.p_offset, ph.p_vaddr, ph.p_paddr, ph.p_filesz, ph.p_memsz, ph.p_flags, ph.p_align);
         }
 
         // Section-Headers + String-Tabellen
@@ -243,13 +257,7 @@ public class ElfHandler {
         for (int i = 0; i < elfFile.e_shnum; i++) {
             ElfSection sec = elfFile.getSection(i);
             ElfSectionHeader sh = sec.header;
-            System.out.printf(
-                    "  [%2d] %-15s Type=%d Flags=0x%x Addr=0x%x Off=0x%x Size=0x%x%n" +
-                            "       Link=%d Info=%d Align=%d EntSize=%d%n",
-                    i, sh.getName(), sh.sh_type, sh.sh_flags,
-                    sh.sh_addr, sh.sh_offset, sh.sh_size,
-                    sh.sh_link, sh.sh_info, sh.sh_addralign, sh.sh_entsize
-            );
+            System.out.printf("  [%2d] %-15s Type=%d Flags=0x%x Addr=0x%x Off=0x%x Size=0x%x%n" + "       Link=%d Info=%d Align=%d EntSize=%d%n", i, sh.getName(), sh.sh_type, sh.sh_flags, sh.sh_addr, sh.sh_offset, sh.sh_size, sh.sh_link, sh.sh_info, sh.sh_addralign, sh.sh_entsize);
 
             if (sh.sh_type == SHT_STRTAB) {
                 // getData liefert byte[]
@@ -264,14 +272,9 @@ public class ElfHandler {
         ElfSymbolTableSection dynsym = elfFile.getDynamicSymbolTableSection();
         for (ElfSymbolTableSection table : new ElfSymbolTableSection[]{symtab, dynsym}) {
             if (table == null) continue;
-            System.out.println("  " + table.header.getName()
-                    + " (" + table.symbols.length + " entries):");
+            System.out.println("  " + table.header.getName() + " (" + table.symbols.length + " entries):");
             for (ElfSymbol sym : table.symbols) {
-                System.out.printf(
-                        "    %-20s Val=0x%x Size=%d Info=0x%x Other=0x%x Shndx=%d%n",
-                        sym.getName(), sym.st_value, sym.st_size,
-                        sym.st_info, sym.st_other, sym.st_shndx
-                );
+                System.out.printf("    %-20s Val=0x%x Size=%d Info=0x%x Other=0x%x Shndx=%d%n", sym.getName(), sym.st_value, sym.st_size, sym.st_info, sym.st_other, sym.st_shndx);
             }
         }
 
@@ -280,10 +283,7 @@ public class ElfHandler {
         if (dyn != null) {
             System.out.println("\nDynamic Section Entries:");
             for (ElfDynamicSection.ElfDynamicStructure entry : dyn.entries) {
-                System.out.printf(
-                        "  Tag=0x%x Val/Ptr=0x%x%n",
-                        entry.d_tag, entry.d_val_or_ptr
-                );
+                System.out.printf("  Tag=0x%x Val/Ptr=0x%x%n", entry.d_tag, entry.d_val_or_ptr);
             }
             // Zusätzliche Infos
             System.out.println("Needed Libraries: " + dyn.getNeededLibraries());

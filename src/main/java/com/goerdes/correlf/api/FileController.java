@@ -71,7 +71,7 @@ public class FileController {
      */
     @PostMapping("/upload-zip")
     public ResponseEntity<Void> uploadZipArchive(@RequestParam("file") MultipartFile archive) throws IOException {
-        fileAnalysisService.importZipArchive(archive);
+        fileAnalysisService.importZipArchive(archive, List.of());
         return ResponseEntity.noContent().build();
     }
 

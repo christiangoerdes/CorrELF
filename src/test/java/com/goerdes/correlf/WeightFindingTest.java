@@ -5,7 +5,7 @@ import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.model.FileComparison;
 import com.goerdes.correlf.model.RepresentationType;
 import com.goerdes.correlf.services.FileComparisonService;
-import com.goerdes.correlf.utils.DataSetup;
+import com.goerdes.correlf.utils.Setup;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,7 +22,7 @@ import static com.goerdes.correlf.model.RepresentationType.*;
  */
 @SpringBootTest
 @Transactional
-public class WeightFindingTest extends DataSetup {
+public class WeightFindingTest extends Setup {
 
     @Autowired
     private FileComparisonService comparisonService;

@@ -11,4 +11,6 @@ public interface FileRepo extends JpaRepository<FileEntity, UUID> {
     Optional<FileEntity> findById(Long id);
 
     List<FileEntity> findBySha256(String sha256);
+
+    Optional<FileEntity> findBySha256AndFilename(String sha256, String filename);
 }

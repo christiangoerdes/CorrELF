@@ -18,5 +18,10 @@ public enum RepresentationType {
      */
     SECTION_SIZE_VECTOR,
 
-    CODE_REGION_LIST
+    CODE_REGION_LIST,
+
+    /**
+     * Only for Test reasons.
+     */
+    NONE
 }

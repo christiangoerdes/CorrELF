@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
+import java.util.List;
 
 import static com.goerdes.correlf.utils.TestUtils.getMockFile;
 
@@ -19,7 +20,7 @@ public class ElfHandlerTest {
 
     @Test
     void testEntityCreation() throws IOException {
-        System.out.println(new ElfHandler(new MinHashProvider()).createEntity(factory.create(getMockFile("busybox"))));
+        System.out.println(new ElfHandler(new MinHashProvider()).createEntity(factory.create(getMockFile("busybox"), List.of())));
     }
 
 }

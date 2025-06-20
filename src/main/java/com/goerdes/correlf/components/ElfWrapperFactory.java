@@ -2,6 +2,7 @@ package com.goerdes.correlf.components;
 
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.ElfWrapper;
+import com.goerdes.correlf.model.RepresentationType;
 import com.goerdes.correlf.utils.ByteUtils;
 import lombok.RequiredArgsConstructor;
 import net.fornwall.jelf.ElfFile;
@@ -17,6 +18,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import static com.goerdes.correlf.model.RepresentationType.CODE_REGION_LIST;
+
 /**
  * Factory that builds {@link ElfWrapper} instances, optionally running the
  * JNA‐backed coderec detection and parsing its JSON output.
@@ -27,11 +30,17 @@ public class ElfWrapperFactory {
 
     private final Coderec coderec;
 
-    /** Toggle in application.properties (default=false) */
+    /**
+     * Toggle in application.properties (default=false)
+     */
     @Value("${coderec.enabled:false}")
     private boolean coderecEnabled;
 
     public ElfWrapper create(MultipartFile file) {
+        return create(file, List.of());
+    }
+
+    public ElfWrapper create(MultipartFile file, List<RepresentationType> representationTypes) {
         try {
             String filename = file.getOriginalFilename();
             if (filename == null) {
@@ -39,7 +48,7 @@ public class ElfWrapperFactory {
             }
 
             byte[] content = file.getBytes();
-            String sha256   = ByteUtils.computeSha256(content);
+            String sha256 = ByteUtils.computeSha256(content);
 
             ElfFile elfFile = null;
             boolean parsed = true;
@@ -48,11 +57,11 @@ public class ElfWrapperFactory {
             } catch (Exception ignored) {
                 parsed = false;
             }
-            long size       = file.getSize();
+            long size = file.getSize();
 
             List<Coderec.CodeRegion> regions = new ArrayList<>();
-            if (coderecEnabled) {
-                Path tmpDir  = Files.createTempDirectory("elf-");
+            if (coderecEnabled && (representationTypes.contains(CODE_REGION_LIST) || representationTypes.isEmpty())) {
+                Path tmpDir = Files.createTempDirectory("elf-");
                 Path tmpFile = tmpDir.resolve(filename);
                 Files.write(tmpFile, content, StandardOpenOption.CREATE);
 
@@ -61,7 +70,12 @@ public class ElfWrapperFactory {
 
                 Files.walk(tmpDir)
                         .sorted(Comparator.reverseOrder())
-                        .forEach(p -> { try { Files.deleteIfExists(p); } catch(Exception ignored){} });
+                        .forEach(p -> {
+                            try {
+                                Files.deleteIfExists(p);
+                            } catch (Exception ignored) {
+                            }
+                        });
             }
 
             return new ElfWrapper(filename, elfFile, parsed, sha256, size, regions);
