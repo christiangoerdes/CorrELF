@@ -67,6 +67,19 @@ public class FileComparisonIntegrationTest extends Setup {
                 label, famTotal, famHigh, famPctHigh, famMedium, famPctMedium, famLow, famPctLow, (famHigh + famMedium)
         );
 
+        // Print filenames with MEDIUM similarity in the family
+        List<String> mediumFamilyNames = family.stream()
+                .filter(c -> "medium".equalsIgnoreCase(c.getSimilarityRating()))
+                .map(FileComparison::getFileName)
+                .toList();
+
+        if (!mediumFamilyNames.isEmpty()) {
+            System.out.println(label + " MEDIUM-similarity files (" + mediumFamilyNames.size() + "):");
+            mediumFamilyNames.forEach(name -> System.out.println("  - " + name));
+        } else {
+            System.out.println("No MEDIUM-similarity " + label + " files found.");
+        }
+
         // Print filenames with LOW similarity in the family
         List<String> lowFamilyNames = family.stream()
                 .filter(c -> "low".equalsIgnoreCase(c.getSimilarityRating()))
