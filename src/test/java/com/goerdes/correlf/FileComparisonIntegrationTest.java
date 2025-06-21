@@ -67,30 +67,39 @@ public class FileComparisonIntegrationTest extends Setup {
                 label, famTotal, famHigh, famPctHigh, famMedium, famPctMedium, famLow, famPctLow, (famHigh + famMedium)
         );
 
-        // Print filenames with MEDIUM similarity in the family
-        List<String> mediumFamilyNames = family.stream()
+        // Detailed MEDIUM-similarity report with average score
+        List<FileComparison> mediumFamily = family.stream()
                 .filter(c -> "medium".equalsIgnoreCase(c.getSimilarityRating()))
-                .map(FileComparison::getFileName)
                 .toList();
+        double avgMediumScore = mediumFamily.stream()
+                .mapToDouble(FileComparison::getSimilarityScore)
+                .average().orElse(0.0);
 
-        if (!mediumFamilyNames.isEmpty()) {
-            System.out.println(label + " MEDIUM-similarity files (" + mediumFamilyNames.size() + "):");
-            mediumFamilyNames.forEach(name -> System.out.println("  - " + name));
+        if (!mediumFamily.isEmpty()) {
+            System.out.printf("%s MEDIUM-similarity files (%d), avgScore=%.2f:%n",
+                    label, mediumFamily.size(), avgMediumScore);
+            mediumFamily.forEach(c ->
+                    System.out.printf("  - %s: %.2f%n", c.getFileName(), c.getSimilarityScore()));
         } else {
             System.out.println("No MEDIUM-similarity " + label + " files found.");
         }
 
-        // Print filenames with LOW similarity in the family
-        List<String> lowFamilyNames = family.stream()
+        // Detailed LOW-similarity report with average score
+        List<FileComparison> lowFamily = family.stream()
                 .filter(c -> "low".equalsIgnoreCase(c.getSimilarityRating()))
-                .map(FileComparison::getFileName)
                 .toList();
+        double avgLowScore = lowFamily.stream()
+                .mapToDouble(FileComparison::getSimilarityScore)
+                .average().orElse(0.0);
 
-        if (!lowFamilyNames.isEmpty()) {
-            System.out.println(label + " LOW-similarity files (" + lowFamilyNames.size() + "):");
-            lowFamilyNames.forEach(name -> System.out.println("  - " + name));
+        if (!lowFamily.isEmpty()) {
+            System.out.printf("%s LOW-similarity files (%d), avgScore=%.2f:%n",
+                    label, lowFamily.size(), avgLowScore);
+            lowFamily.forEach(c ->
+                    System.out.printf("  - %s: %.2f%n", c.getFileName(), c.getSimilarityScore()));
         } else {
             System.out.println("No LOW-similarity " + label + " files found.");
         }
+
     }
 }
