@@ -13,6 +13,7 @@ import java.util.List;
  *   <li>Indicator whether ELF parsing was successful</li>
  *   <li>SHA-256 digest of the file contents</li>
  *   <li>File size in bytes</li>
+ *   <li>Gnu Strings</li>
  *   <li>List of {@link CodeRegion code regions}</li>
  * </ul>
  */
@@ -22,5 +23,6 @@ public record ElfWrapper(
         boolean parsingSuccessful,
         String sha256,
         long size,
+        List<String> strings,
         List<CodeRegion> codeRegions
 ) {}

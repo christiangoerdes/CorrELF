@@ -20,6 +20,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static com.goerdes.correlf.model.RepresentationType.CODE_REGION_LIST;
+import static com.goerdes.correlf.utils.StringsUtil.strings;
 
 /**
  * Factory that builds {@link ElfWrapper} instances, optionally running the
@@ -60,26 +61,24 @@ public class ElfWrapperFactory {
             }
             long size = file.getSize();
 
+            Path tmpDir = Files.createTempDirectory("elf-");
+            Path tmpFile = tmpDir.resolve(filename);
+            Files.write(tmpFile, content, StandardOpenOption.CREATE);
+
+            List<String> strings = strings(tmpFile);
+
             List<Coderec.CodeRegion> regions = new ArrayList<>();
             if (coderecEnabled && (representationTypes.contains(CODE_REGION_LIST) || representationTypes.isEmpty())) {
-                Path tmpDir = Files.createTempDirectory("elf-");
-                Path tmpFile = tmpDir.resolve(filename);
-                Files.write(tmpFile, content, StandardOpenOption.CREATE);
-
-
                 regions = coderec.analyze(tmpFile);
-
-                Files.walk(tmpDir)
-                        .sorted(Comparator.reverseOrder())
-                        .forEach(p -> {
-                            try {
-                                Files.deleteIfExists(p);
-                            } catch (Exception ignored) {
-                            }
-                        });
             }
+            Files.walk(tmpDir).sorted(Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (Exception ignored) {
+                }
+            });
 
-            return new ElfWrapper(filename, elfFile, parsed, sha256, size, regions);
+            return new ElfWrapper(filename, elfFile, parsed, sha256, size, strings, regions);
 
         } catch (IOException e) {
             throw new FileProcessingException("I/O error during ELF wrap: " + e.getMessage(), e);

@@ -10,7 +10,6 @@ import net.fornwall.jelf.*;
 import org.springframework.stereotype.Component;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -19,9 +18,7 @@ import static com.goerdes.correlf.components.MinHashProvider.MINHASH_DICT_SIZE;
 import static com.goerdes.correlf.model.RepresentationType.*;
 import static com.goerdes.correlf.utils.ByteUtils.*;
 import static java.util.AbstractMap.SimpleEntry;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.IntStream.range;
 import static net.fornwall.jelf.ElfSectionHeader.SHT_STRTAB;
 
 @RequiredArgsConstructor
@@ -49,19 +46,18 @@ public class ElfHandler {
                 setFile(entity);
             }});
 
-
-            entity.addRepresentation(new RepresentationEntity() {{
-                setType(STRING_MINHASH);
-                setData(packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(extractStrings(elfFile)))));
-                setFile(entity);
-            }});
-
             entity.addRepresentation(new RepresentationEntity() {{
                 setType(SECTION_SIZE_VECTOR);
                 setData(packDoublesToBytes(buildSectionSizeVector(elfFile, elfWrapper.size())));
                 setFile(entity);
             }});
         }
+
+        entity.addRepresentation(new RepresentationEntity() {{
+            setType(STRING_MINHASH);
+            setData(packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(elfWrapper.strings()))));
+            setFile(entity);
+        }});
 
         entity.addRepresentation(new RepresentationEntity() {{
             setType(CODE_REGION_LIST);
@@ -91,13 +87,16 @@ public class ElfHandler {
                 updateRep(entity, ELF_HEADER_VECTOR, () -> packDoublesToBytes(extractHeaderVector(elfFile)));
             }
 
-            if (updateAll || representationTypes.contains(STRING_MINHASH)) {
-                updateRep(entity, STRING_MINHASH, () -> packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(extractStrings(elfFile)))));
-            }
+
 
             if (updateAll || representationTypes.contains(SECTION_SIZE_VECTOR)) {
                 updateRep(entity, SECTION_SIZE_VECTOR, () -> packDoublesToBytes(buildSectionSizeVector(elfFile, elfWrapper.size())));
             }
+        }
+
+        if (updateAll || representationTypes.contains(STRING_MINHASH)) {
+            updateRep(entity, STRING_MINHASH,
+                    () -> packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(elfWrapper.strings()))));
         }
 
         if (updateAll || representationTypes.contains(CODE_REGION_LIST)) {
@@ -177,17 +176,6 @@ public class ElfHandler {
                 (double) elf.e_shnum,       // the number of entries in the section header table
                 (double) elf.e_shstrndx     // the section header table index of the entry associated with the section name string table
         };
-    }
-
-    /**
-     * Extracts all “real” null-terminated strings from STRTAB sections
-     * (excluding the section-name table) in the given ElfFile, using streams.
-     *
-     * @param elf the parsed ELF file
-     * @return a List of non-empty strings found in all STRTAB sections
-     */
-    private static List<String> extractStrings(ElfFile elf) {
-        return range(0, elf.e_shnum).filter(i -> elf.getSection(i).header.sh_type == SHT_STRTAB && i != elf.e_shstrndx).mapToObj(i -> elf.getSection(i).getData()).flatMap(raw -> Arrays.stream(new String(raw, StandardCharsets.ISO_8859_1).split("\0", -1))).map(String::trim).filter(s -> !s.isEmpty()).collect(toList());
     }
 
     /**
