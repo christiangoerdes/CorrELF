@@ -1,6 +1,6 @@
 package com.goerdes.correlf.services;
 
-import com.goerdes.correlf.components.coderec.Coderec;
+import com.goerdes.correlf.components.Coderec;
 import com.goerdes.correlf.components.ElfHandler;
 import com.goerdes.correlf.components.ElfWrapperFactory;
 import com.goerdes.correlf.db.FileEntity;

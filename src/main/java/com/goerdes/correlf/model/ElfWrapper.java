@@ -1,6 +1,6 @@
 package com.goerdes.correlf.model;
 
-import com.goerdes.correlf.components.coderec.Coderec.CodeRegion;
+import com.goerdes.correlf.components.Coderec.CodeRegion;
 import net.fornwall.jelf.ElfFile;
 
 import java.util.List;

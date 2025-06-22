@@ -1,4 +1,4 @@
-package com.goerdes.correlf.components.coderec;
+package com.goerdes.correlf.components;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

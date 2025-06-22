@@ -1,6 +1,5 @@
 package com.goerdes.correlf.components;
 
-import com.goerdes.correlf.components.coderec.Coderec;
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.ElfWrapper;
 import com.goerdes.correlf.model.RepresentationType;

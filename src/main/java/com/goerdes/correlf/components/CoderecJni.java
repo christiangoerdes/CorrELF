@@ -1,4 +1,4 @@
-package com.goerdes.correlf.components.coderec;
+package com.goerdes.correlf.components;
 
 import org.springframework.stereotype.Component;
 

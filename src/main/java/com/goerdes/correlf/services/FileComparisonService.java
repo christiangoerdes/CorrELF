@@ -1,6 +1,6 @@
 package com.goerdes.correlf.services;
 
-import com.goerdes.correlf.components.coderec.Coderec.CodeRegion;
+import com.goerdes.correlf.components.Coderec.CodeRegion;
 import com.goerdes.correlf.components.MinHashProvider;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.model.FileComparison;
@@ -48,12 +48,12 @@ public class FileComparisonService {
             double headerSim = getHeaderSim(referenceFile, targetFile);
             comparisons.put(ELF_HEADER_VECTOR, headerSim);
 
-            double stringSim = getStringSim(referenceFile, targetFile);
-            comparisons.put(STRING_MINHASH, stringSim);
-
             double sectionSizeSim = getSectionSizeSim(referenceFile, targetFile);
             comparisons.put(SECTION_SIZE_VECTOR, sectionSizeSim);
         }
+
+        double stringSim = getStringSim(referenceFile, targetFile);
+        comparisons.put(STRING_MINHASH, stringSim);
 
         double codeRegionSim =
                 computeJaccardScore(deserializeCodeRegions(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData()),
@@ -68,7 +68,7 @@ public class FileComparisonService {
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);
-            setSimilarityScore(bothParsed ? simScore : codeRegionSim);
+            setSimilarityScore(bothParsed ? simScore : (0.5 * codeRegionSim + 0.5 * stringSim));
         }};
     }
 
