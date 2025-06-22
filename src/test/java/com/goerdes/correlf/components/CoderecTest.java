@@ -1,5 +1,6 @@
 package com.goerdes.correlf.components;
 
+import com.goerdes.correlf.components.coderec.CoderecJni;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

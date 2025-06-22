@@ -1,6 +1,6 @@
 package com.goerdes.correlf.services;
 
-import com.goerdes.correlf.components.Coderec.CodeRegion;
+import com.goerdes.correlf.components.coderec.Coderec.CodeRegion;
 import com.goerdes.correlf.components.MinHashProvider;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.model.FileComparison;

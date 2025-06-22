@@ -3,7 +3,7 @@ package com.goerdes.correlf.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.goerdes.correlf.components.Coderec;
+import com.goerdes.correlf.components.coderec.Coderec;
 import com.goerdes.correlf.exception.FileProcessingException;
 
 import java.io.IOException;
