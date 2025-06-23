@@ -22,14 +22,22 @@ public class FileComparisonService {
     private final MinHashProvider minHashProvider;
 
     /**
-     * Weights for each RepresentationType.
+     * Weights for each RepresentationType
      */
-    private final Map<RepresentationType, Double> weights = new EnumMap<>(Map.of(
-            ELF_HEADER_VECTOR, 0.0,
-            STRING_MINHASH,    0.4,
-            SECTION_SIZE_VECTOR, 0.6
-    ));
+    private final Map<RepresentationType, Double> fullWeights = new EnumMap<>(RepresentationType.class) {{
+        put(ELF_HEADER_VECTOR, 0.0);
+        put(SECTION_SIZE_VECTOR, 0.6);
+        put(STRING_MINHASH, 0.4);
+        put(CODE_REGION_LIST, 0.8);
+    }};
 
+    /**
+     * Fallback weights when only core representations are available
+     */
+    private final Map<RepresentationType, Double> fallbackWeights = new EnumMap<>(RepresentationType.class) {{
+        put(STRING_MINHASH, 0.2);
+        put(CODE_REGION_LIST, 0.8);
+    }};
 
     /**
      * Compares a reference file against a target file and returns
@@ -44,31 +52,28 @@ public class FileComparisonService {
 
         boolean bothParsed = referenceFile.isParsingSuccessful() && targetFile.isParsingSuccessful();
 
-        if(bothParsed) {
-            double headerSim = getHeaderSim(referenceFile, targetFile);
-            comparisons.put(ELF_HEADER_VECTOR, headerSim);
-
-            double sectionSizeSim = getSectionSizeSim(referenceFile, targetFile);
-            comparisons.put(SECTION_SIZE_VECTOR, sectionSizeSim);
+        if (bothParsed) {
+            comparisons.put(ELF_HEADER_VECTOR, getHeaderSim(referenceFile, targetFile));
+            comparisons.put(SECTION_SIZE_VECTOR, getSectionSizeSim(referenceFile, targetFile));
         }
 
         double stringSim = getStringSim(referenceFile, targetFile);
         comparisons.put(STRING_MINHASH, stringSim);
 
-        double codeRegionSim =
-                computeJaccardScore(deserializeCodeRegions(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData()),
-                        deserializeCodeRegions(targetFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData()));
-        comparisons.put(CODE_REGION_LIST, codeRegionSim);
+        comparisons.put(CODE_REGION_LIST, computeJaccardScore(
+                deserializeCodeRegions(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData()),
+                deserializeCodeRegions(targetFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData())
+        ));
 
         double simScore = comparisons.entrySet().stream()
-                .mapToDouble(e -> weights.getOrDefault(e.getKey(), 0.0) * e.getValue())
+                .mapToDouble(e -> (bothParsed ? fullWeights : fallbackWeights).getOrDefault(e.getKey(), 0.0) * e.getValue())
                 .sum();
 
         return new FileComparison() {{
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);
-            setSimilarityScore(bothParsed ? simScore : (0.5 * codeRegionSim + 0.5 * stringSim));
+            setSimilarityScore(simScore);
         }};
     }
 
@@ -145,14 +150,15 @@ public class FileComparisonService {
         while (i < ia.size() && j < ib.size()) {
             Interval A = ia.get(i), B = ib.get(j);
             long lo = Math.max(A.start, B.start);
-            long hi = Math.min(A.end,   B.end);
+            long hi = Math.min(A.end, B.end);
             if (lo < hi) inter += hi - lo;
-            if (A.end < B.end) i++; else j++;
+            if (A.end < B.end) i++;
+            else j++;
         }
 
         long sumA = ia.stream().mapToLong(iv -> iv.end - iv.start).sum();
         long sumB = ib.stream().mapToLong(iv -> iv.end - iv.start).sum();
-        long uni  = sumA + sumB - inter;
+        long uni = sumA + sumB - inter;
         return uni == 0 ? 1.0 : (double) inter / uni;
     }
 
