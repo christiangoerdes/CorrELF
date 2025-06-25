@@ -64,6 +64,11 @@ public class ElfHandler {
             setData(serializeCodeRegions(elfWrapper.codeRegions()));
             setFile(entity);
         }});
+        entity.addRepresentation(new RepresentationEntity() {{
+            setType(PROGRAM_HEADER_TABLE);
+            setData(serializePHT(elfWrapper.programHeaders()));
+            setFile(entity);
+        }});
 
         // debugPrint(elfFile);
 
@@ -87,8 +92,6 @@ public class ElfHandler {
                 updateRep(entity, ELF_HEADER_VECTOR, () -> packDoublesToBytes(extractHeaderVector(elfFile)));
             }
 
-
-
             if (updateAll || representationTypes.contains(SECTION_SIZE_VECTOR)) {
                 updateRep(entity, SECTION_SIZE_VECTOR, () -> packDoublesToBytes(buildSectionSizeVector(elfFile, elfWrapper.size())));
             }
@@ -101,6 +104,11 @@ public class ElfHandler {
 
         if (updateAll || representationTypes.contains(CODE_REGION_LIST)) {
             updateRep(entity, CODE_REGION_LIST, () -> serializeCodeRegions(elfWrapper.codeRegions()));
+        }
+
+        if (updateAll || representationTypes.contains(PROGRAM_HEADER_TABLE)) {
+            updateRep(entity, PROGRAM_HEADER_TABLE,
+                    () -> serializePHT(elfWrapper.programHeaders()));
         }
 
         return  entity;

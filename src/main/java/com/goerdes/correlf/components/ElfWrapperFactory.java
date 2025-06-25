@@ -2,6 +2,7 @@ package com.goerdes.correlf.components;
 
 import com.goerdes.correlf.exception.FileProcessingException;
 import com.goerdes.correlf.model.ElfWrapper;
+import com.goerdes.correlf.model.ProgramHeader;
 import com.goerdes.correlf.model.RepresentationType;
 import com.goerdes.correlf.utils.ByteUtils;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static com.goerdes.correlf.model.RepresentationType.CODE_REGION_LIST;
+import static com.goerdes.correlf.utils.ProgramHeaderUtil.extractProgramHeaders;
 import static com.goerdes.correlf.utils.StringsUtil.strings;
 
 /**
@@ -66,6 +68,8 @@ public class ElfWrapperFactory {
 
             List<String> strings = strings(tmpFile);
 
+            List<ProgramHeader> programHeaders = extractProgramHeaders(tmpFile);
+
             List<Coderec.CodeRegion> regions = new ArrayList<>();
             if (coderecEnabled && (representationTypes.contains(CODE_REGION_LIST) || representationTypes.isEmpty())) {
                 regions = coderec.analyze(tmpFile);
@@ -77,7 +81,7 @@ public class ElfWrapperFactory {
                 }
             });
 
-            return new ElfWrapper(filename, elfFile, parsed, sha256, size, strings, regions);
+            return new ElfWrapper(filename, elfFile, parsed, sha256, size, strings, regions, programHeaders);
 
         } catch (IOException e) {
             throw new FileProcessingException("I/O error during ELF wrap: " + e.getMessage(), e);

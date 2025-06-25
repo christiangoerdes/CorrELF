@@ -39,7 +39,7 @@ public class ProgramHeaderUtil {
      * Parses the lines of `readelf -lW` output to extract program headers.
      *
      * @param lines the raw output lines from the readelf invocation
-     * @return a list of ProgramHeaderInfo entries
+     * @return a list of ProgramHeader entries
      */
     private static List<ProgramHeader> parseReadelfOutput(List<String> lines) {
         List<ProgramHeader> result = new ArrayList<>();

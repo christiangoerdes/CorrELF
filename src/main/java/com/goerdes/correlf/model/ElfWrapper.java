@@ -15,6 +15,7 @@ import java.util.List;
  *   <li>File size in bytes</li>
  *   <li>Gnu Strings</li>
  *   <li>List of {@link CodeRegion code regions}</li>
+ *   <li>List of {@link ProgramHeader program header}</li>
  * </ul>
  */
 public record ElfWrapper(
@@ -24,5 +25,6 @@ public record ElfWrapper(
         String sha256,
         long size,
         List<String> strings,
-        List<CodeRegion> codeRegions
+        List<CodeRegion> codeRegions,
+        List<ProgramHeader> programHeaders
 ) {}
