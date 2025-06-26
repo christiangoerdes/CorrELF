@@ -19,20 +19,20 @@ public class SimilarityAnalysisTest extends Setup {
 
     @Test
     void testBusybox() throws Exception {
-        analyzeAndReport("busybox");
+        analyzeAndReport("busybox", "busybox");
     }
 
     @Test
     void testDropbear() throws Exception {
-        analyzeAndReport("dropbear");
+        analyzeAndReport("dropbear", "dropbear");
     }
 
     /**
      * Analyzes a file set and prints similarity reports.
      * Only non-family HIGH-similarity files are reported.
      */
-    private void analyzeAndReport(String label) throws Exception {
-        List<FileComparison> comparisons = fileAnalysisService.analyze(getMockFile(label));
+    private void analyzeAndReport(String label, String file) throws Exception {
+        List<FileComparison> comparisons = fileAnalysisService.analyze(getMockFile(file));
 
         Map<String, List<FileComparison>> byRating = comparisons.stream()
                 .collect(Collectors.groupingBy(c -> c.getSimilarityRating().toLowerCase()));
