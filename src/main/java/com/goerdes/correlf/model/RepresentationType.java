@@ -20,6 +20,11 @@ public enum RepresentationType {
 
     CODE_REGION_LIST,
 
+    REGION_COUNT_SIM,
+    AVG_REGION_LENGTH_SIM,
+
+    PROGRAM_HEADER_VECTOR,
+
     /**
      * Only for Test reasons.
      */

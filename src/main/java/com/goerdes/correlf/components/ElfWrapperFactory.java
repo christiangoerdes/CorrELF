@@ -20,7 +20,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static com.goerdes.correlf.model.RepresentationType.CODE_REGION_LIST;
-import static com.goerdes.correlf.utils.ProgramHeaderUtil.extractProgramHeaders;
+import static com.goerdes.correlf.utils.ProgramHeaderUtils.extractProgramHeaders;
 import static com.goerdes.correlf.utils.StringsUtil.strings;
 
 /**

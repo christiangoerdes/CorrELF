@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class ProgramHeaderUtil {
+public class ProgramHeaderUtils {
 
     /**
      * Invokes `readelf -lW` on the given ELF file and parses the output
@@ -89,4 +89,49 @@ public class ProgramHeaderUtil {
         }
         return result;
     }
+
+    public static double[] buildFeatureVector(List<ProgramHeader> list) {
+        if(list.isEmpty()) return new double[]{};
+
+        int n = list.size();
+        long totalMem = list.stream().mapToLong(ProgramHeader::memSize).sum();
+        long totalFile = list.stream().mapToLong(ProgramHeader::fileSize).sum();
+
+        double avg = computeAverage(list);
+        double std = computeStdDev(list, avg);
+        double[] p = computePercentiles(list);
+
+        double fracExec = computeFlagFraction(list, 'E');
+        double fracWrite = computeFlagFraction(list, 'W');
+        double fileMemRatio = totalMem > 0 ? (double) totalFile / totalMem : 0.0;
+
+        return new double[]{
+                n,                  // 0: segment count
+                avg,                // 1: average memSize
+                std,                // 2: std-dev memSize
+                p[0], p[1], p[2],   // 3–5: 25th, 50th, 75th percentiles
+                fracExec,           // 6: fraction executable
+                fracWrite,          // 7: fraction writable
+                fileMemRatio        // 8: fileSize:memSize ratio
+        };
+    }
+
+    private static double computeAverage(List<ProgramHeader> list) {
+        return list.stream().mapToLong(ProgramHeader::memSize).average().orElse(0.0);
+    }
+
+    private static double computeStdDev(List<ProgramHeader> list, double mean) {
+        return Math.sqrt(list.stream().mapToDouble(h -> Math.pow(h.memSize() - mean, 2)).sum() / list.size());
+    }
+
+    private static double[] computePercentiles(List<ProgramHeader> list) {
+        long[] sizes = list.stream().mapToLong(ProgramHeader::memSize).sorted().toArray();
+        int n = sizes.length;
+        return new double[]{sizes[Math.max(0, (int) Math.round(0.25 * (n - 1)))], sizes[Math.max(0, (int) Math.round(0.50 * (n - 1)))], sizes[Math.max(0, (int) Math.round(0.75 * (n - 1)))]};
+    }
+
+    private static double computeFlagFraction(List<ProgramHeader> list, char flag) {
+        return list.stream().filter(h -> h.flags().indexOf(flag) >= 0).count() / (double) list.size();
+    }
+
 }

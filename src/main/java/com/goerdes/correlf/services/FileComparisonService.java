@@ -28,7 +28,7 @@ public class FileComparisonService {
         put(ELF_HEADER_VECTOR, 0.0);
         put(SECTION_SIZE_VECTOR, 0.6);
         put(STRING_MINHASH, 0.4);
-        put(CODE_REGION_LIST, 0.8);
+        put(CODE_REGION_LIST, 0.0);
     }};
 
     /**
@@ -60,10 +60,17 @@ public class FileComparisonService {
         double stringSim = getStringSim(referenceFile, targetFile);
         comparisons.put(STRING_MINHASH, stringSim);
 
-        comparisons.put(CODE_REGION_LIST, computeJaccardScore(
-                deserializeCodeRegions(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData()),
-                deserializeCodeRegions(targetFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData())
-        ));
+        List<CodeRegion> codeRegionsA = deserializeCodeRegions(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData());
+        List<CodeRegion> codeRegionsB = deserializeCodeRegions(targetFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData());
+
+        if(!codeRegionsA.isEmpty() && !codeRegionsB.isEmpty()) {
+            comparisons.put(CODE_REGION_LIST, computeJaccardScore(codeRegionsA, codeRegionsB));
+            comparisons.put(REGION_COUNT_SIM, regionCountSimilarity(codeRegionsA, codeRegionsB));
+            comparisons.put(AVG_REGION_LENGTH_SIM, avgRegionLengthSimilarity(codeRegionsA, codeRegionsB));
+        }
+
+        double programHeaderSim = getProgramHeaderSim(referenceFile, targetFile);
+        comparisons.put(PROGRAM_HEADER_VECTOR, programHeaderSim);
 
         double simScore = comparisons.entrySet().stream()
                 .mapToDouble(e -> (bothParsed ? fullWeights : fallbackWeights).getOrDefault(e.getKey(), 0.0) * e.getValue())
@@ -73,38 +80,54 @@ public class FileComparisonService {
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);
-            setSimilarityScore(simScore);
+            setSimilarityScore(programHeaderSim);
         }};
+    }
+
+    private static double getProgramHeaderSim(FileEntity referenceFile, FileEntity targetFile) {
+        return computeProgramHeaderSimilarity(
+                unpackBytesToDoubles(referenceFile.findRepresentationByType(PROGRAM_HEADER_VECTOR).orElseThrow().getData()),
+                unpackBytesToDoubles(targetFile.findRepresentationByType(PROGRAM_HEADER_VECTOR).orElseThrow().getData())
+        );
     }
 
     double getSectionSizeSim(FileEntity referenceFile, FileEntity targetFile) {
         return cosineSimilarity(
-                unpackBytesToDoubles(
-                        referenceFile.findRepresentationByType(SECTION_SIZE_VECTOR).orElseThrow().getData()
-                ), unpackBytesToDoubles(
-                        targetFile.findRepresentationByType(SECTION_SIZE_VECTOR).orElseThrow().getData()
-                )
+                unpackBytesToDoubles(referenceFile.findRepresentationByType(SECTION_SIZE_VECTOR).orElseThrow().getData()),
+                unpackBytesToDoubles(targetFile.findRepresentationByType(SECTION_SIZE_VECTOR).orElseThrow().getData())
         );
     }
 
     double getStringSim(FileEntity referenceFile, FileEntity targetFile) {
         return minHashProvider.get().similarity(
-                unpackBytesToInts(
-                        referenceFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()
-                ), unpackBytesToInts(
-                        targetFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()
-                )
+                unpackBytesToInts(referenceFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData()),
+                unpackBytesToInts(targetFile.findRepresentationByType(STRING_MINHASH).orElseThrow().getData())
         );
     }
 
     double getHeaderSim(FileEntity referenceFile, FileEntity targetFile) {
         return cosineSimilarity(
-                unpackBytesToDoubles(
-                        referenceFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
-                ), unpackBytesToDoubles(
-                        targetFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()
-                )
+                unpackBytesToDoubles(referenceFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData()),
+                unpackBytesToDoubles(targetFile.findRepresentationByType(ELF_HEADER_VECTOR).orElseThrow().getData())
         );
+    }
+
+    public static double computeProgramHeaderSimilarity(double[] a, double[] b) {
+        if (a.length == 0 || b.length == 0) {
+            return 0.0;
+        }
+        normalizeFeatures(a, b);
+        return cosineSimilarity(a, b);
+    }
+
+    private static void normalizeFeatures(double[] a, double[] b) {
+        for (int i = 0; i <= 6; i++) {
+            double max = Math.max(a[i], b[i]);
+            if (max > 0) {
+                a[i] /= max;
+                b[i] /= max;
+            }
+        }
     }
 
     /**
@@ -162,21 +185,46 @@ public class FileComparisonService {
         return uni == 0 ? 1.0 : (double) inter / uni;
     }
 
+
+    /**
+     * Computes count-based similarity:
+     * similarity = 1 - ||A| - |B|| / max(|A|, |B|).
+     * Returns 1.0 if both lists have the same size;
+     * returns 0.0 if one list is empty and the other is non-empty.
+     */
+    public static double regionCountSimilarity(List<CodeRegion> a, List<CodeRegion> b) {
+        int na = a.size(), nb = b.size();
+        if (na == 0 && nb == 0) return 1.0;
+        if (na == 0 || nb == 0) return 0.0;
+        return 1.0 - (Math.abs(na - nb) / (double) Math.max(na, nb));
+    }
+
+    /**
+     * Computes average-length similarity:
+     * similarity = min(avgA, avgB) / max(avgA, avgB).
+     * Returns 1.0 if both averages are equal;
+     * returns 0.0 if one average is zero.
+     */
+    public static double avgRegionLengthSimilarity(List<CodeRegion> a, List<CodeRegion> b) {
+        double avgA = a.stream().mapToLong(CodeRegion::length).average().orElse(0);
+        double avgB = b.stream().mapToLong(CodeRegion::length).average().orElse(0);
+        if (avgA == 0 && avgB == 0) return 1.0;
+        if (avgA == 0 || avgB == 0) return 0.0;
+        return Math.min(avgA, avgB) / Math.max(avgA, avgB);
+    }
+
     /**
      * Merge overlapping code regions into disjoint intervals.
      */
     private static List<Interval> mergeAndNormalize(List<CodeRegion> regions) {
-        return regions.stream()
-                .map(r -> new Interval(r.start(), r.end()))
-                .sorted(comparingLong(iv -> iv.start))
-                .collect(ArrayList::new, (out, iv) -> {
-                    if (out.isEmpty() || out.getLast().end < iv.start) {
-                        out.add(iv);
-                    } else { // overlap --> extend interval
-                        Interval last = out.getLast();
-                        last.end = Math.max(last.end, iv.end);
-                    }
-                }, ArrayList::addAll);
+        return regions.stream().map(r -> new Interval(r.start(), r.end())).sorted(comparingLong(iv -> iv.start)).collect(ArrayList::new, (out, iv) -> {
+            if (out.isEmpty() || out.getLast().end < iv.start) {
+                out.add(iv);
+            } else { // overlap --> extend interval
+                Interval last = out.getLast();
+                last.end = Math.max(last.end, iv.end);
+            }
+        }, ArrayList::addAll);
     }
 
     @AllArgsConstructor

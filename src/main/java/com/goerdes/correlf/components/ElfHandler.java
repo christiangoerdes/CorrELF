@@ -17,6 +17,7 @@ import java.util.stream.IntStream;
 import static com.goerdes.correlf.components.MinHashProvider.MINHASH_DICT_SIZE;
 import static com.goerdes.correlf.model.RepresentationType.*;
 import static com.goerdes.correlf.utils.ByteUtils.*;
+import static com.goerdes.correlf.utils.ProgramHeaderUtils.buildFeatureVector;
 import static java.util.AbstractMap.SimpleEntry;
 import static java.util.stream.Collectors.toMap;
 import static net.fornwall.jelf.ElfSectionHeader.SHT_STRTAB;
@@ -64,9 +65,10 @@ public class ElfHandler {
             setData(serializeCodeRegions(elfWrapper.codeRegions()));
             setFile(entity);
         }});
+
         entity.addRepresentation(new RepresentationEntity() {{
-            setType(PROGRAM_HEADER_TABLE);
-            setData(serializePHT(elfWrapper.programHeaders()));
+            setType(PROGRAM_HEADER_VECTOR);
+            setData(packDoublesToBytes(buildFeatureVector(elfWrapper.programHeaders())));
             setFile(entity);
         }});
 
@@ -106,9 +108,9 @@ public class ElfHandler {
             updateRep(entity, CODE_REGION_LIST, () -> serializeCodeRegions(elfWrapper.codeRegions()));
         }
 
-        if (updateAll || representationTypes.contains(PROGRAM_HEADER_TABLE)) {
-            updateRep(entity, PROGRAM_HEADER_TABLE,
-                    () -> serializePHT(elfWrapper.programHeaders()));
+        if (updateAll || representationTypes.contains(PROGRAM_HEADER_VECTOR)) {
+            updateRep(entity, PROGRAM_HEADER_VECTOR,
+                    () -> packDoublesToBytes(buildFeatureVector(elfWrapper.programHeaders())));
         }
 
         return  entity;
@@ -241,12 +243,6 @@ public class ElfHandler {
         System.out.printf("  ShStrIdx:    %d%n", elfFile.e_shstrndx);
 
 
-        // Program-Headers
-        System.out.println("Program Headers:");
-        for (int i = 0; i < elfFile.e_phnum; i++) {
-            ElfSegment ph = elfFile.getProgramHeader(i);
-            System.out.printf("  [%2d] Type=0x%x Off=0x%x VAddr=0x%x PAddr=0x%x%n" + "       FileSz=0x%x MemSz=0x%x Flags=0x%x Align=0x%x%n", i, ph.p_type, ph.p_offset, ph.p_vaddr, ph.p_paddr, ph.p_filesz, ph.p_memsz, ph.p_flags, ph.p_align);
-        }
 
         // Section-Headers + String-Tabellen
         System.out.println("\nSection Headers:");

@@ -32,8 +32,8 @@ public class FileComparisonIntegrationTest extends Setup {
     private void analyzeAndReport(String label, String resourcePath) throws Exception {
         List<FileComparison> comparisons = fileAnalysisService.analyze(getMockFile(resourcePath));
 
-        System.out.println("\n===== " + label.toUpperCase() + " COMPARISONS =====");
-        System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(comparisons));
+//        System.out.println("\n===== " + label.toUpperCase() + " COMPARISONS =====");
+//        System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(comparisons));
 
         long total  = comparisons.size();
         long high   = comparisons.stream().filter(c -> "high".equalsIgnoreCase(c.getSimilarityRating())).count();

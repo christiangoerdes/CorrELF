@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goerdes.correlf.components.Coderec;
 import com.goerdes.correlf.exception.FileProcessingException;
-import com.goerdes.correlf.model.ProgramHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -123,28 +122,6 @@ public final class ByteUtils {
     }
 
     public static List<Coderec.CodeRegion> deserializeCodeRegions(byte[] data) {
-        try {
-            return MAPPER.readValue(
-                    data,
-                    new TypeReference<>() {
-                    }
-            );
-        } catch (IOException e) {
-            throw new FileProcessingException(
-                    "Error deserializing CodeRegion list", e
-            );
-        }
-    }
-
-    public static byte[] serializePHT(List<ProgramHeader> regs) {
-        try {
-            return MAPPER.writeValueAsBytes(regs);
-        } catch (JsonProcessingException e) {
-            throw new FileProcessingException("Error serializing CodeRegion list", e);
-        }
-    }
-
-    public static List<ProgramHeader> deserializePHT(byte[] data) {
         try {
             return MAPPER.readValue(
                     data,

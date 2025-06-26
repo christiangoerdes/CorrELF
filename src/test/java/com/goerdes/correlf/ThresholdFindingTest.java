@@ -32,37 +32,14 @@ public class ThresholdFindingTest extends Setup {
 
     @Test
     void findBusyboxHeaderThreshold() throws Exception {
-        double th = findThresholdByMinFamilySim("busybox", RepresentationType.ELF_HEADER_VECTOR);
+        double th = findThresholdByMinFamilySim("busybox", RepresentationType.PROGRAM_HEADER_VECTOR);
         System.out.printf("Best header threshold for busybox: %.4f%n", th);
     }
 
     @Test
-    void findBusyboxStringThreshold() throws Exception {
-        double th = findThresholdByMinFamilySim("busybox", RepresentationType.STRING_MINHASH);
-        System.out.printf("Best string threshold for busybox: %.4f%n", th);
-    }
-
-    @Test
-    void findBusyboxSectionSizeThreshold() throws Exception {
-        double th = findThresholdByMinFamilySim("busybox", RepresentationType.SECTION_SIZE_VECTOR);
-        System.out.printf("Best section-size threshold for busybox: %.4f%n", th);
-    }
-
-    @Test
     void findDropbearHeaderThreshold() throws Exception{
-        double th = findThresholdByMinFamilySim("dropbear", RepresentationType.ELF_HEADER_VECTOR);
+        double th = findThresholdByMinFamilySim("dropbear", RepresentationType.PROGRAM_HEADER_VECTOR);
         System.out.printf("Best header threshold for dropbear: %.4f%n", th);
     }
 
-    @Test
-    void findDropbearStringThreshold() throws Exception{
-        double th = findThresholdByMinFamilySim("dropbear", RepresentationType.STRING_MINHASH);
-        System.out.printf("Best string threshold for dropbear: %.4f%n", th);
-    }
-
-    @Test
-    void findDropbearSectionSizeThreshold() throws Exception{
-        double th = findThresholdByMinFamilySim("dropbear", RepresentationType.SECTION_SIZE_VECTOR);
-        System.out.printf("Best section-size threshold for dropbear: %.4f%n", th);
-    }
 }
