@@ -25,25 +25,18 @@ public class FileComparisonService {
      * Weights for each RepresentationType
      */
     private final Map<RepresentationType, Double> fullWeights = new EnumMap<>(RepresentationType.class) {{
-        put(ELF_HEADER_VECTOR, 0.032);
-        put(STRING_MINHASH, 0.125);
-        put(SECTION_SIZE_VECTOR, 0.338);
-        put(CODE_REGION_LIST, 0.190);
-        put(REGION_COUNT_SIM, 0.021);
-        put(AVG_REGION_LENGTH_SIM, 0.007);
-        put(PROGRAM_HEADER_VECTOR, 0.277);
-        put(NONE, 0.009);
+        put(STRING_MINHASH, 0.202);
+        put(CODE_REGION_LIST, 0.037);
+        put(PROGRAM_HEADER_VECTOR, 0.761);
     }};
 
     /**
      * Fallback weights when only core representations are available
      */
     private final Map<RepresentationType, Double> fallbackWeights = new EnumMap<>(RepresentationType.class) {{
-        put(STRING_MINHASH, 0.100);
-        put(CODE_REGION_LIST, 0.154);
-        put(REGION_COUNT_SIM, 0.048);
-        put(AVG_REGION_LENGTH_SIM, 0.009);
-        put(PROGRAM_HEADER_VECTOR, 0.688);
+        put(STRING_MINHASH, 0.202);
+        put(CODE_REGION_LIST, 0.037);
+        put(PROGRAM_HEADER_VECTOR, 0.761);
     }};
 
     /**
@@ -72,8 +65,6 @@ public class FileComparisonService {
 
         if(!codeRegionsA.isEmpty() && !codeRegionsB.isEmpty()) {
             comparisons.put(CODE_REGION_LIST, computeJaccardScore(codeRegionsA, codeRegionsB));
-            comparisons.put(REGION_COUNT_SIM, regionCountSimilarity(codeRegionsA, codeRegionsB));
-            comparisons.put(AVG_REGION_LENGTH_SIM, avgRegionLengthSimilarity(codeRegionsA, codeRegionsB));
         }
 
         double programHeaderSim = getProgramHeaderSim(referenceFile, targetFile);
@@ -190,34 +181,6 @@ public class FileComparisonService {
         long sumB = ib.stream().mapToLong(iv -> iv.end - iv.start).sum();
         long uni = sumA + sumB - inter;
         return uni == 0 ? 1.0 : (double) inter / uni;
-    }
-
-
-    /**
-     * Computes count-based similarity:
-     * similarity = 1 - ||A| - |B|| / max(|A|, |B|).
-     * Returns 1.0 if both lists have the same size;
-     * returns 0.0 if one list is empty and the other is non-empty.
-     */
-    public static double regionCountSimilarity(List<CodeRegion> a, List<CodeRegion> b) {
-        int na = a.size(), nb = b.size();
-        if (na == 0 && nb == 0) return 1.0;
-        if (na == 0 || nb == 0) return 0.0;
-        return 1.0 - (Math.abs(na - nb) / (double) Math.max(na, nb));
-    }
-
-    /**
-     * Computes average-length similarity:
-     * similarity = min(avgA, avgB) / max(avgA, avgB).
-     * Returns 1.0 if both averages are equal;
-     * returns 0.0 if one average is zero.
-     */
-    public static double avgRegionLengthSimilarity(List<CodeRegion> a, List<CodeRegion> b) {
-        double avgA = a.stream().mapToLong(CodeRegion::length).average().orElse(0);
-        double avgB = b.stream().mapToLong(CodeRegion::length).average().orElse(0);
-        if (avgA == 0 && avgB == 0) return 1.0;
-        if (avgA == 0 || avgB == 0) return 0.0;
-        return Math.min(avgA, avgB) / Math.max(avgA, avgB);
     }
 
     /**

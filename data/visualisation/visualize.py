@@ -11,8 +11,8 @@ df['is_busybox'] = df['fileName'].str.contains('busybox')
 metrics = [
     'comparisonDetails_CODE_REGION_LIST',
     'comparisonDetails_STRING_MINHASH',
-    'comparisonDetails_REGION_COUNT_SIM',
-    'comparisonDetails_AVG_REGION_LENGTH_SIM',
+    'comparisonDetails_SECTION_SIZE_VECTOR',
+    'comparisonDetails_ELF_HEADER_VECTOR',
     'comparisonDetails_PROGRAM_HEADER_VECTOR'
 ]
 

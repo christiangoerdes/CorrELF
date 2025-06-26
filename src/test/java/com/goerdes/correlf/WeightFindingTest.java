@@ -41,9 +41,9 @@ public class WeightFindingTest {
         List<RepresentationType> types = List.of(
                 RepresentationType.STRING_MINHASH,
                 RepresentationType.CODE_REGION_LIST,
-                RepresentationType.REGION_COUNT_SIM,
-                RepresentationType.AVG_REGION_LENGTH_SIM,
-                RepresentationType.PROGRAM_HEADER_VECTOR
+                RepresentationType.PROGRAM_HEADER_VECTOR,
+                RepresentationType.SECTION_SIZE_VECTOR,
+                RepresentationType.ELF_HEADER_VECTOR
         );
 
         MultipartFile upload = getMockFile(fileKey);
