@@ -1,7 +1,6 @@
 package com.goerdes.correlf;
 
 import com.goerdes.correlf.model.FileComparison;
-import com.goerdes.correlf.model.RepresentationType;
 import com.goerdes.correlf.utils.Setup;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,12 +13,12 @@ import static com.goerdes.correlf.utils.TestUtils.getMockFile;
 @SpringBootTest
 public class ThresholdFindingTest extends Setup {
 
-    private double findThresholdByMinFamilySim(String familyKey, RepresentationType type) throws IOException {
+    private double findThresholdByMinFamilySim(String familyKey) throws IOException {
         List<FileComparison> comparisons = fileAnalysisService.analyze(getMockFile(familyKey));
 
         List<Double> familySims = comparisons.stream()
                 .filter(c -> c.getFileName().toLowerCase().contains(familyKey))
-                .map(c -> c.getComparisonDetails().get(type))
+                .map(FileComparison::getSimilarityScore)
                 .toList();
 
         if (familySims.isEmpty()) {
@@ -32,13 +31,13 @@ public class ThresholdFindingTest extends Setup {
 
     @Test
     void findBusyboxHeaderThreshold() throws Exception {
-        double th = findThresholdByMinFamilySim("busybox", RepresentationType.PROGRAM_HEADER_VECTOR);
+        double th = findThresholdByMinFamilySim("busybox");
         System.out.printf("Best header threshold for busybox: %.4f%n", th);
     }
 
     @Test
     void findDropbearHeaderThreshold() throws Exception{
-        double th = findThresholdByMinFamilySim("dropbear", RepresentationType.PROGRAM_HEADER_VECTOR);
+        double th = findThresholdByMinFamilySim("dropbear");
         System.out.printf("Best header threshold for dropbear: %.4f%n", th);
     }
 
