@@ -25,18 +25,25 @@ public class FileComparisonService {
      * Weights for each RepresentationType
      */
     private final Map<RepresentationType, Double> fullWeights = new EnumMap<>(RepresentationType.class) {{
-        put(ELF_HEADER_VECTOR, 0.0);
-        put(SECTION_SIZE_VECTOR, 0.6);
-        put(STRING_MINHASH, 0.4);
-        put(CODE_REGION_LIST, 0.0);
+        put(ELF_HEADER_VECTOR, 0.032);
+        put(STRING_MINHASH, 0.125);
+        put(SECTION_SIZE_VECTOR, 0.338);
+        put(CODE_REGION_LIST, 0.190);
+        put(REGION_COUNT_SIM, 0.021);
+        put(AVG_REGION_LENGTH_SIM, 0.007);
+        put(PROGRAM_HEADER_VECTOR, 0.277);
+        put(NONE, 0.009);
     }};
 
     /**
      * Fallback weights when only core representations are available
      */
     private final Map<RepresentationType, Double> fallbackWeights = new EnumMap<>(RepresentationType.class) {{
-        put(STRING_MINHASH, 0.2);
-        put(CODE_REGION_LIST, 0.8);
+        put(STRING_MINHASH, 0.100);
+        put(CODE_REGION_LIST, 0.154);
+        put(REGION_COUNT_SIM, 0.048);
+        put(AVG_REGION_LENGTH_SIM, 0.009);
+        put(PROGRAM_HEADER_VECTOR, 0.688);
     }};
 
     /**
@@ -80,7 +87,7 @@ public class FileComparisonService {
             setFileName(targetFile.getFilename());
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);
-            setSimilarityScore(programHeaderSim);
+            setSimilarityScore(simScore);
         }};
     }
 
