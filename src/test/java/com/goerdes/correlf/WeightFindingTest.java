@@ -1,119 +1,75 @@
 package com.goerdes.correlf;
 
-import com.goerdes.correlf.db.FileEntity;
-import com.goerdes.correlf.db.FileRepo;
 import com.goerdes.correlf.model.FileComparison;
 import com.goerdes.correlf.model.RepresentationType;
-import com.goerdes.correlf.services.FileComparisonService;
-import com.goerdes.correlf.utils.Setup;
+import com.goerdes.correlf.services.FileAnalysisService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-import static com.goerdes.correlf.model.RepresentationType.*;
+import static com.goerdes.correlf.utils.TestUtils.getMockFile;
 
 /**
- * Finds optimal weights for a given fixed threshold.
+ * Computes weights for each RepresentationType so that the weighted sum
+ * of comparisonDetails best separates the specified family from others
+ * at the given threshold. Prints out a Map ready to copy into code.
  */
 @SpringBootTest
-@Transactional
-public class WeightFindingTest extends Setup {
+public class WeightFindingTest {
 
     @Autowired
-    private FileComparisonService comparisonService;
-
-    @Autowired
-    private FileRepo fileRepo;
-
-    /**
-     * Gathers raw per‐representation similarity values between the first "familyKey" file
-     * and all files in the database.
-     */
-    private List<RawSim> gatherRawSims(String familyKey) {
-        FileEntity reference = fileRepo.findAll().stream()
-                .filter(f -> f.getFilename().toLowerCase().contains(familyKey))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No reference for: " + familyKey));
-
-        List<RawSim> rawList = new ArrayList<>();
-        for (FileEntity target : fileRepo.findAll()) {
-            FileComparison comp = comparisonService.compareFiles(reference, target);
-            Map<RepresentationType, Double> details = comp.getComparisonDetails();
-            boolean isFamily = target.getFilename().toLowerCase().contains(familyKey);
-            rawList.add(new RawSim(
-                    details.get(ELF_HEADER_VECTOR),
-                    details.get(STRING_MINHASH),
-                    details.get(SECTION_SIZE_VECTOR),
-                    isFamily
-            ));
-        }
-        return rawList;
-    }
-
-    /**
-     * Given a list of RawSim and a fixed threshold, finds weights (w1, w2, w3 step=0.1,
-     * w1+w2+w3=1.0) that maximize true positives, then minimize
-     * false positives (non-family sims ≥ threshold).
-     */
-    @SuppressWarnings("SameParameterValue")
-    private void findBestWeightsForThreshold(String familyKey, double threshold) {
-        List<RawSim> rawList = gatherRawSims(familyKey);
-
-        int bestTP = -1;
-        int bestFP = Integer.MAX_VALUE;
-        double[] bestWeights = new double[]{0.0, 0.0, 0.0};
-
-        for (int i = 0; i <= 10; i++) {
-            double w1 = i / 10.0;
-            for (int j = 0; j <= 10 - i; j++) {
-                double w2 = j / 10.0;
-                double w3 = 1.0 - w1 - w2;
-
-                int tp = 0, fp = 0;
-                for (RawSim r : rawList) {
-                    double score = w1 * r.headerSim + w2 * r.stringSim + w3 * r.sectionSim;
-                    if (r.isFamily) {
-                        if (score >= threshold) {
-                            tp++;
-                        }
-                    } else {
-                        if (score >= threshold) {
-                            fp++;
-                        }
-                    }
-                }
-
-                if (tp > bestTP || (tp == bestTP && fp < bestFP)) {
-                    bestTP = tp;
-                    bestFP = fp;
-                    bestWeights = new double[]{w1, w2, w3};
-                }
-            }
-        }
-
-        System.out.printf(
-                "Threshold=%.3f, best weights for %s: header=%.1f, string=%.1f, section=%.1f => TP=%d, FP=%d%n",
-                threshold, familyKey,
-                bestWeights[0], bestWeights[1], bestWeights[2],
-                bestTP, bestFP
-        );
-    }
+    private FileAnalysisService fileAnalysisService;
 
     @Test
-    void findBusyboxBestWeightsAtConstantThreshold() {
-        findBestWeightsForThreshold("busybox", 0.800);
-    }
+    void computeOptimalWeightsForBusyboxFamily() throws Exception {
+        String fileKey = "busybox";
+        String familyPrefix = "busybox";
+        double threshold = 0.8;
+        List<RepresentationType> types = List.of(RepresentationType.STRING_MINHASH,
+                RepresentationType.CODE_REGION_LIST, RepresentationType.REGION_COUNT_SIM,
+                RepresentationType.AVG_REGION_LENGTH_SIM, RepresentationType.PROGRAM_HEADER_VECTOR);
 
-    @Test
-    void findDropbearBestWeightsAtConstantThreshold() {
-        findBestWeightsForThreshold("dropbear", 0.800);
-    }
+        MultipartFile upload = getMockFile(fileKey);
+        List<FileComparison> all = fileAnalysisService.analyze(upload);
+        var family = all.stream()
+                .filter(fc -> fc.getFileName().startsWith(familyPrefix))
+                .toList();
+        var nonFamily = all.stream()
+                .filter(fc -> !fc.getFileName().startsWith(familyPrefix))
+                .toList();
 
-    private record RawSim(double headerSim, double stringSim, double sectionSim, boolean isFamily) {
+        Map<RepresentationType, Double> diffs = new EnumMap<>(RepresentationType.class);
+        for (var type : types) {
+            double meanFam = family.stream()
+                    .mapToDouble(fc -> fc.getComparisonDetails().getOrDefault(type, 0.0))
+                    .average().orElse(0.0);
+            double meanNon = nonFamily.stream()
+                    .mapToDouble(fc -> fc.getComparisonDetails().getOrDefault(type, 0.0))
+                    .average().orElse(0.0);
+
+            diffs.put(type, Math.max(0.0, meanFam - meanNon));
+        }
+
+        double sumDiffs = diffs.values().stream().mapToDouble(Double::doubleValue).sum();
+        Map<RepresentationType, Double> weights = new EnumMap<>(RepresentationType.class);
+        if (sumDiffs > 0) {
+            diffs.forEach((type, diff) ->
+                    weights.put(type, diff / sumDiffs)
+            );
+        } else {
+            double eq = 1.0 / types.size();
+            types.forEach(t -> weights.put(t, eq));
+        }
+
+        System.out.println("private final Map<RepresentationType, Double> fullWeights = new EnumMap<>(RepresentationType.class) {{");
+        weights.forEach((type, w) ->
+                System.out.printf(Locale.US, "    put(%s, %.3f);%n", type.name(), w));
+        System.out.println("}};");
     }
 }
