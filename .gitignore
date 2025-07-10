@@ -11,3 +11,6 @@
 /src/main/resources/coderec/*
 /src/main/resources/application-local.properties
 /data/manual-extension/
+/data/LFwC/select_samples.py
+/data/LFwC/
+/data/openwrt/
