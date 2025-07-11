@@ -13,7 +13,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 BUILDS_DIR = (SCRIPT_DIR / '..' / 'builds').resolve()
 
-DATASET_DIR = (SCRIPT_DIR / '..' / 'dataset' / 'buildroot').resolve()
+DATASET_DIR = (SCRIPT_DIR / '..' / 'dataset' / 'Buildroot').resolve()
 
 def aggregate_elfs():
     DATASET_DIR.mkdir(parents=True, exist_ok=True)

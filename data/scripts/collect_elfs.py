@@ -46,7 +46,7 @@ def extract_elfs_from_roots():
 
             seen = {}
             for src in tmp_path.rglob('*'):
-                if not src.is_file():
+                if src.is_symlink() or not src.is_file():
                     continue
                 if not is_elf_file(src):
                     continue
@@ -57,11 +57,15 @@ def extract_elfs_from_roots():
                 seen[base] = count + 1
 
                 dst_path = elfs_dir / dest_name
-                shutil.copy2(src, dst_path)
-                rel = src.relative_to(tmp_path)
-                logger.info(f"{image_dir.name}: extracted {rel} → elfs/{dest_name}")
+                try:
+                    shutil.copy2(src, dst_path)
+                    rel = src.relative_to(tmp_path)
+                    logger.info(f"{image_dir.name}: extracted {rel} → elfs/{dest_name}")
+                except Exception as e:
+                    logger.warning(f"{image_dir.name}: failed to copy {src}: {e}")
 
     logger.info("All done.")
+
 
 if __name__ == '__main__':
     extract_elfs_from_roots()
