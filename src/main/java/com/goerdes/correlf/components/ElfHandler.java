@@ -81,10 +81,7 @@ public class ElfHandler {
      * Updates the specified representations on the existing FileEntity.
      * If representationTypes is null or empty, all representations are updated.
      */
-    public FileEntity updateEntity(
-            FileEntity entity, ElfWrapper elfWrapper,
-            List<RepresentationType> representationTypes
-    ) throws FileProcessingException {
+    public FileEntity updateEntity(FileEntity entity, ElfWrapper elfWrapper, List<RepresentationType> representationTypes) throws FileProcessingException {
         boolean updateAll = representationTypes == null || representationTypes.isEmpty();
 
         if (elfWrapper.parsingSuccessful()) {
@@ -100,8 +97,7 @@ public class ElfHandler {
         }
 
         if (updateAll || representationTypes.contains(STRING_MINHASH)) {
-            updateRep(entity, STRING_MINHASH,
-                    () -> packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(elfWrapper.strings()))));
+            updateRep(entity, STRING_MINHASH, () -> packIntsToBytes(minHashProvider.get().signature(mapStringsToTokens(elfWrapper.strings()))));
         }
 
         if (updateAll || representationTypes.contains(CODE_REGION_LIST)) {
@@ -109,11 +105,10 @@ public class ElfHandler {
         }
 
         if (updateAll || representationTypes.contains(PROGRAM_HEADER_VECTOR)) {
-            updateRep(entity, PROGRAM_HEADER_VECTOR,
-                    () -> packDoublesToBytes(buildFeatureVector(elfWrapper.programHeaders())));
+            updateRep(entity, PROGRAM_HEADER_VECTOR, () -> packDoublesToBytes(buildFeatureVector(elfWrapper.programHeaders())));
         }
 
-        return  entity;
+        return entity;
     }
 
     /**
@@ -133,7 +128,13 @@ public class ElfHandler {
      * @return a double[6] of (sectionSize / totalSize)
      * @throws ElfException if any section cannot be read
      */
-    public static double[] buildSectionSizeVector(ElfFile elf, long size) throws ElfException {
+    public static double[] buildSectionSizeVector(ElfFile elf, long size) {
+        final double[] zeros = new double[]{0, 0, 0, 0, 0, 0};
+        try {
+            long shEnd = Math.addExact(elf.e_shoff, (long) elf.e_shentsize * (long) elf.e_shnum);
+            if (elf.e_shoff < 0 || elf.e_shentsize <= 0 || elf.e_shnum < 0 || shEnd > size) {
+                return zeros;
+            }
 
         Map<String, Integer> idxMap = Map.of(
                 ".text", 0,     // executable instructions
@@ -144,14 +145,32 @@ public class ElfHandler {
                 ".shstrtab", 5  // section-header string table
         );
 
-        Map<String, Long> sectionSizeMap = IntStream.range(0, elf.e_shnum).mapToObj(elf::getSection).map(section -> (section.header.getName() == null) ? null : new AbstractMap.SimpleEntry<>(section.header.getName().trim(), section.header.sh_size)).filter(entry -> entry != null && idxMap.containsKey(entry.getKey())).collect(toMap(SimpleEntry::getKey, SimpleEntry::getValue, (existing, replacement) -> existing));
+            Map<String, Long> sectionSizeMap = IntStream.range(0, elf.e_shnum)
+                    .mapToObj(i -> {
+                        // Per-entry guard
+                        long off = elf.e_shoff + (long) i * elf.e_shentsize;
+                        if (off < 0 || off + elf.e_shentsize > size) return null;
+                        ElfSection s = elf.getSection(i);
+                        String name = s.header.getName();
+                        if (name == null) return null;
+                        name = name.trim();
+                        return idxMap.containsKey(name)
+                                ? new AbstractMap.SimpleEntry<>(name, s.header.sh_size)
+                                : null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
 
-        double[] sectionSizes = new double[idxMap.size()];
-        Arrays.fill(sectionSizes, 0.0);
-        idxMap.forEach((name, idx) -> sectionSizes[idx] = (double) sectionSizeMap.getOrDefault(name, 0L) / (double) size);
-
-        return sectionSizes;
+            double[] sectionSizes = new double[idxMap.size()];
+            Arrays.fill(sectionSizes, 0.0);
+            idxMap.forEach((n, idx) ->
+                    sectionSizes[idx] = (double) sectionSizeMap.getOrDefault(n, 0L) / (double) size);
+            return sectionSizes;
+        } catch (Throwable t) {
+            return zeros;
+        }
     }
+
 
 
     /**
@@ -166,8 +185,7 @@ public class ElfHandler {
      * ehSize, phEntrySize, phCount, shEntrySize, shCount, shStrIdx]
      */
     private static double[] extractHeaderVector(ElfFile elf) {
-        return new double[]{
-                elf.ei_class == ElfFile.CLASS_32 ? 0.0 : 1.0,   // the architecture for the binary
+        return new double[]{elf.ei_class == ElfFile.CLASS_32 ? 0.0 : 1.0,   // the architecture for the binary
                 elf.ei_data == ElfFile.DATA_LSB ? 0.0 : 1.0,   // the data encoding of the processor-specific data in the file
                 (double) elf.ei_version,    //  the version number of the ELF specification
                 (double) elf.ei_osabi,      // the operating system and ABI to which the object is targeted
@@ -241,7 +259,6 @@ public class ElfHandler {
         System.out.printf("  PhEntrySize: %d, PhCount: %d%n", elfFile.e_phentsize, elfFile.e_phnum);
         System.out.printf("  ShEntrySize: %d, ShCount: %d%n", elfFile.e_shentsize, elfFile.e_shnum);
         System.out.printf("  ShStrIdx:    %d%n", elfFile.e_shstrndx);
-
 
 
         // Section-Headers + String-Tabellen

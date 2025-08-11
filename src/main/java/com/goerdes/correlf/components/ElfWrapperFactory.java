@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -46,9 +47,10 @@ public class ElfWrapperFactory {
     public ElfWrapper create(MultipartFile file, List<RepresentationType> representationTypes) {
         try {
             String filename = file.getOriginalFilename();
-            if (filename == null) {
-                throw new FileProcessingException("Missing original filename", null);
-            }
+            if (filename == null) throw new FileProcessingException("Missing original filename", null);
+
+            String safeName = Paths.get(filename).getFileName().toString()
+                    .replaceAll("[\\\\/:*?\"<>|]", "_");
 
             byte[] content = file.getBytes();
             String sha256 = ByteUtils.computeSha256(content);
@@ -63,8 +65,10 @@ public class ElfWrapperFactory {
             long size = file.getSize();
 
             Path tmpDir = Files.createTempDirectory("elf-");
-            Path tmpFile = tmpDir.resolve(filename);
-            Files.write(tmpFile, content, StandardOpenOption.CREATE);
+            Path tmpFile = tmpDir.resolve(safeName);
+            Files.createDirectories(tmpFile.getParent());
+
+            Files.write(tmpFile, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
             List<String> strings = strings(tmpFile);
 

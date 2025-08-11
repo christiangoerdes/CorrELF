@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -114,9 +115,11 @@ public class FileAnalysisService {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (!entry.isDirectory()) {
+                    String baseName = Paths.get(entry.getName()).getFileName().toString()
+                            .replaceAll("[\\\\/:*?\"<>|]", "_");
                     files.add(new MockMultipartFile(
-                            entry.getName(),
-                            entry.getName(),
+                            baseName,
+                            baseName,
                             "application/octet-stream",
                             zis.readAllBytes()
                     ));

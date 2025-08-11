@@ -18,9 +18,9 @@ public class UploadZipArchiveTest extends Setup {
     void setupData() throws IOException {
         fileAnalysisService.importZipArchive(new MockMultipartFile(
                 "file",
-                "all_elfs.zip",
+                "Train.zip",
                 "application/zip",
-                new ClassPathResource("all_elfs.zip").getInputStream()
+                new ClassPathResource("Train.zip").getInputStream()
         ), List.of(NONE));
     }
 }
