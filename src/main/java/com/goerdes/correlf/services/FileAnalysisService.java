@@ -63,9 +63,9 @@ public class FileAnalysisService {
 
         List<FileEntity> stored = fileRepo.findAll();
 
-        if (fileRepo.findBySha256AndFilename(elfWrapper.sha256(), elfWrapper.filename()).isEmpty()) {
-            fileRepo.save(elfHandler.createEntity(elfWrapper));
-        }
+//        if (fileRepo.findBySha256AndFilename(elfWrapper.sha256(), elfWrapper.filename()).isEmpty()) {
+//            fileRepo.save(elfHandler.createEntity(elfWrapper));
+//        }
 
         return stored.stream()
                 .map(other -> comparisonService.compareFiles(elfHandler.createEntity(elfWrapper), other))
