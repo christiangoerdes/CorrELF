@@ -79,6 +79,7 @@ public class FileComparisonService {
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);
             setSimilarityScore(simScore);
+            setWeights(fullWeights);
         }};
     }
 

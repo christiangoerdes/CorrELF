@@ -48,6 +48,12 @@ public class FileComparison {
     private Map<RepresentationType, Double> comparisonDetails = new HashMap<>();
 
     /**
+     * The weights used to calculate the similarity Score
+     */
+    @Setter
+    private Map<RepresentationType, Double> weights = new HashMap<>();
+
+    /**
      * Updates the overall similarityScore and recomputes similarityRating.
      *
      * @param similarityScore value between 0.0 and 1.0
