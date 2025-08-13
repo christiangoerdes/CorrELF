@@ -120,7 +120,7 @@ public class FileComparisonService {
     }
 
     private static void normalizeFeatures(double[] a, double[] b) {
-        for (int i = 0; i <= 6; i++) {
+        for (int i = 0; i < 6; i++) {
             double max = Math.max(a[i], b[i]);
             if (max > 0) {
                 a[i] /= max;
