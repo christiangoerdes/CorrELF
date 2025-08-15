@@ -77,4 +77,7 @@ public class Coderec {
      * @param tag    classifier tag
      */
     public record CodeRegion(long start, long end, long length, String tag) {}
+
+    public record Interval(long start, long end) {}
+
 }

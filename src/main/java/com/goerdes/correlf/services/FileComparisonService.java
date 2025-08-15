@@ -1,19 +1,20 @@
 package com.goerdes.correlf.services;
 
-import com.goerdes.correlf.components.Coderec.CodeRegion;
+import com.goerdes.correlf.components.Coderec;
 import com.goerdes.correlf.components.MinHashProvider;
 import com.goerdes.correlf.db.FileEntity;
 import com.goerdes.correlf.model.FileComparison;
 import com.goerdes.correlf.model.RepresentationType;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static com.goerdes.correlf.model.RepresentationType.*;
 import static com.goerdes.correlf.utils.ByteUtils.*;
-import static java.util.Comparator.comparingLong;
 
 @Service
 @RequiredArgsConstructor
@@ -60,8 +61,8 @@ public class FileComparisonService {
         double stringSim = getStringSim(referenceFile, targetFile);
         comparisons.put(STRING_MINHASH, stringSim);
 
-        List<CodeRegion> codeRegionsA = deserializeCodeRegions(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData());
-        List<CodeRegion> codeRegionsB = deserializeCodeRegions(targetFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData());
+        List<Coderec.Interval> codeRegionsA = deserializeCodeIntervals(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData());
+        List<Coderec.Interval> codeRegionsB = deserializeCodeIntervals(targetFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData());
 
         if(!codeRegionsA.isEmpty() && !codeRegionsB.isEmpty()) {
             comparisons.put(CODE_REGION_LIST, computeJaccardScore(codeRegionsA, codeRegionsB));
@@ -163,44 +164,23 @@ public class FileComparisonService {
     /**
      * Computes Jaccard score = |A ∩ B| / |A ∪ B| over code‐region byte intervals.
      */
-    public static double computeJaccardScore(List<CodeRegion> a, List<CodeRegion> b) {
-        List<Interval> ia = mergeAndNormalize(a);
-        List<Interval> ib = mergeAndNormalize(b);
+    public static double computeJaccardScore(List<Coderec.Interval> ia, List<Coderec.Interval> ib) {
 
         long inter = 0;
         int i = 0, j = 0;
         while (i < ia.size() && j < ib.size()) {
-            Interval A = ia.get(i), B = ib.get(j);
-            long lo = Math.max(A.start, B.start);
-            long hi = Math.min(A.end, B.end);
+            Coderec.Interval A = ia.get(i), B = ib.get(j);
+            long lo = Math.max(A.start(), B.start());
+            long hi = Math.min(A.end(), B.end());
             if (lo < hi) inter += hi - lo;
-            if (A.end < B.end) i++;
+            if (A.end() < B.end()) i++;
             else j++;
         }
 
-        long sumA = ia.stream().mapToLong(iv -> iv.end - iv.start).sum();
-        long sumB = ib.stream().mapToLong(iv -> iv.end - iv.start).sum();
+        long sumA = ia.stream().mapToLong(iv -> iv.end() - iv.start()).sum();
+        long sumB = ib.stream().mapToLong(iv -> iv.end() - iv.start()).sum();
         long uni = sumA + sumB - inter;
         return uni == 0 ? 1.0 : (double) inter / uni;
-    }
-
-    /**
-     * Merge overlapping code regions into disjoint intervals.
-     */
-    private static List<Interval> mergeAndNormalize(List<CodeRegion> regions) {
-        return regions.stream().map(r -> new Interval(r.start(), r.end())).sorted(comparingLong(iv -> iv.start)).collect(ArrayList::new, (out, iv) -> {
-            if (out.isEmpty() || out.getLast().end < iv.start) {
-                out.add(iv);
-            } else { // overlap --> extend interval
-                Interval last = out.getLast();
-                last.end = Math.max(last.end, iv.end);
-            }
-        }, ArrayList::addAll);
-    }
-
-    @AllArgsConstructor
-    private static class Interval {
-        long start, end;
     }
 
 }

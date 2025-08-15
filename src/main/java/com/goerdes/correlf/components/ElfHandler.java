@@ -18,7 +18,6 @@ import static com.goerdes.correlf.components.MinHashProvider.MINHASH_DICT_SIZE;
 import static com.goerdes.correlf.model.RepresentationType.*;
 import static com.goerdes.correlf.utils.ByteUtils.*;
 import static com.goerdes.correlf.utils.ProgramHeaderUtils.buildFeatureVector;
-import static java.util.AbstractMap.SimpleEntry;
 import static java.util.stream.Collectors.toMap;
 import static net.fornwall.jelf.ElfSectionHeader.SHT_STRTAB;
 
@@ -62,7 +61,7 @@ public class ElfHandler {
 
         entity.addRepresentation(new RepresentationEntity() {{
             setType(CODE_REGION_LIST);
-            setData(serializeCodeRegions(elfWrapper.codeRegions()));
+            setData(serializeCodeIntervals(mergeAndNormalize(elfWrapper.codeRegions())));
             setFile(entity);
         }});
 
@@ -101,7 +100,8 @@ public class ElfHandler {
         }
 
         if (updateAll || representationTypes.contains(CODE_REGION_LIST)) {
-            updateRep(entity, CODE_REGION_LIST, () -> serializeCodeRegions(elfWrapper.codeRegions()));
+            updateRep(entity, CODE_REGION_LIST,
+                    () -> serializeCodeIntervals(mergeAndNormalize(elfWrapper.codeRegions())));
         }
 
         if (updateAll || representationTypes.contains(PROGRAM_HEADER_VECTOR)) {
@@ -223,6 +223,30 @@ public class ElfHandler {
         return tokenSet;
     }
 
+    /**
+     * Merge overlapping code regions into disjoint intervals.
+     */
+    private static List<Coderec.Interval> mergeAndNormalize(List<Coderec.CodeRegion> regions) {
+        return regions.stream()
+                .map(r -> new Coderec.Interval(r.start(), r.end()))
+                .sorted(Comparator.comparingLong(Coderec.Interval::start))
+                .collect(ArrayList::new, (out, iv) -> {
+                    int n = out.size();
+                    if (n == 0) {
+                        out.add(iv);
+                    } else {
+                        Coderec.Interval last = out.get(n - 1);
+                        if (last.end() < iv.start()) {           // no overlap
+                            out.add(iv);
+                        } else {                                  // overlap/adjacent -> replace with merged interval
+                            out.set(n - 1, new Coderec.Interval(
+                                    last.start(),
+                                    Math.max(last.end(), iv.end())
+                            ));
+                        }
+                    }
+                }, ArrayList::addAll);
+    }
 
     // ---------------------------- DEBUG ----------------------------
 

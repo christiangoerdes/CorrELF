@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goerdes.correlf.components.Coderec;
+import com.goerdes.correlf.components.ElfHandler;
 import com.goerdes.correlf.exception.FileProcessingException;
 
 import java.io.IOException;
@@ -113,7 +114,7 @@ public final class ByteUtils {
         }
     }
 
-    public static byte[] serializeCodeRegions(List<Coderec.CodeRegion> regs) {
+    public static byte[] serializeCodeIntervals(List<Coderec.Interval> regs) {
         try {
             return MAPPER.writeValueAsBytes(regs);
         } catch (JsonProcessingException e) {
@@ -121,7 +122,7 @@ public final class ByteUtils {
         }
     }
 
-    public static List<Coderec.CodeRegion> deserializeCodeRegions(byte[] data) {
+    public static List<Coderec.Interval> deserializeCodeIntervals(byte[] data) {
         try {
             return MAPPER.readValue(
                     data,
