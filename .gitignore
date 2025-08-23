@@ -19,3 +19,13 @@
 /data/dataset_buildroot.zip
 /data/dataset_LFwC.zip
 /data/dataset_openwrt.zip
+/data/evaluation/weight_and_threshold/train_busybox_128_minhash/
+/data/evaluation/weight_and_threshold/train_busybox_512_minhash/
+/data/evaluation/weight_and_threshold/visualisazion/exports_512_minhash/y_index_map.json
+/data/evaluation/weight_and_threshold/visualisazion/exports_128_minhash/y_index_map.json
+/data/evaluation/weight_and_threshold/visualisazion/exports_512_minhash/busybox_rep_stats.csv
+/data/evaluation/weight_and_threshold/visualisazion/exports_512_minhash/busybox_scatter_data.csv
+/data/evaluation/weight_and_threshold/visualisazion/exports_512_minhash/busybox_source_index_map.csv
+/data/evaluation/weight_and_threshold/visualisazion/exports_128_minhash/busybox_source_index_map.csv
+/data/evaluation/weight_and_threshold/visualisazion/exports_128_minhash/busybox_rep_stats.csv
+/data/evaluation/weight_and_threshold/visualisazion/exports_128_minhash/busybox_scatter_data.csv
