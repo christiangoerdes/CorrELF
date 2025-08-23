@@ -12,12 +12,12 @@ public class MinHashProvider {
 
     private static final long SEED = 123456789L;
 
-    public static final Integer MINHASH_DICT_SIZE = 50000;
+    public static final Integer MINHASH_DICT_SIZE = 16_777_216;
 
     private final MinHash minhash;
 
     public MinHashProvider() {
-        this.minhash = new MinHash(128, MINHASH_DICT_SIZE, SEED);
+        this.minhash = new MinHash(512, MINHASH_DICT_SIZE, SEED);
     }
 
     /**
