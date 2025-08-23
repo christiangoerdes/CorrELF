@@ -1,0 +1,14 @@
+{
+  "family": "busybox",
+  "features": [
+    "PROGRAM_HEADER_VECTOR",
+    "CODE_REGION_LIST",
+    "STRING_MINHASH"
+  ],
+  "weights_sum_to_1": [
+    0.02839514011969615,
+    0.0,
+    0.9716048598803039
+  ],
+  "threshold_weighted_score": 0.149
+}
