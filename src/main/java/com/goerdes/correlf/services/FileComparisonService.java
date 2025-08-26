@@ -26,18 +26,18 @@ public class FileComparisonService {
      * Weights for each RepresentationType
      */
     private final Map<RepresentationType, Double> fullWeights = new EnumMap<>(RepresentationType.class) {{
-        put(STRING_MINHASH, 0.202);
-        put(CODE_REGION_LIST, 0.037);
-        put(PROGRAM_HEADER_VECTOR, 0.761);
+        put(STRING_MINHASH, 1.0);
+        put(CODE_REGION_LIST, 0.0);
+        put(PROGRAM_HEADER_VECTOR, 0.0);
     }};
 
     /**
      * Fallback weights when only core representations are available
      */
     private final Map<RepresentationType, Double> fallbackWeights = new EnumMap<>(RepresentationType.class) {{
-        put(STRING_MINHASH, 0.202);
-        put(CODE_REGION_LIST, 0.037);
-        put(PROGRAM_HEADER_VECTOR, 0.761);
+        put(STRING_MINHASH, 1.0);
+        put(CODE_REGION_LIST, 0.0);
+        put(PROGRAM_HEADER_VECTOR, 0.0);
     }};
 
     /**
