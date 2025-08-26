@@ -7,7 +7,7 @@ DATA_DIR_CANDIDATES = [Path("../train_busybox_512_minhash/busybox")]
 EXPORT_DIR = Path("./exports_512_minhash")
 REMOVE_SELF_MATCHES = True
 LOW_T = 0.05
-HIGH_T = 0.95
+HIGH_T = 0.7
 
 def find_data_dir(cands: List[Path]) -> Path:
     for p in cands:
@@ -31,7 +31,6 @@ def bb_id(name: str) -> str:
     s = name.lower()
     return s.split("busybox___", 1)[1] if "busybox___" in s else s
 
-# --------- Main ---------
 data_dir = find_data_dir(DATA_DIR_CANDIDATES)
 json_files = sorted(data_dir.glob("*.json"))
 if not json_files:
@@ -77,11 +76,7 @@ for rep, classes in stats.items():
         d["gt_pct"] = round(d["gt"] / tot, 6)
         d["lt_pct"] = round(d["lt"] / tot, 6)
 
-EXPORT_DIR.mkdir(parents=True, exist_ok=True)
-out_path = EXPORT_DIR / "rep_threshold_stats.json"
-with out_path.open("w", encoding="utf-8") as f:
-    json.dump(stats, f, ensure_ascii=False, indent=2)
-print(f"Saved: {out_path}")
+
 
 def fmt(rep: str, cls: str, d: Dict[str, float]) -> str:
     return (f"{rep:<22} {cls:<5} | "
