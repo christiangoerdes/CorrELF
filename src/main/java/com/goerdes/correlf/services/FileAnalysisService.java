@@ -48,27 +48,24 @@ public class FileAnalysisService {
     private boolean coderecEnabled;
 
     /**
-     * Parse and store the uploaded file (if new), then compare it
+     * Parse the uploaded file, then compare it
      * against all previously stored files.
      *
      * @param upload the ELF file uploaded via API
      * @return list of comparisons against each stored file
      * @throws FileProcessingException if parsing or persistence fails
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public List<FileComparison> analyze(MultipartFile upload) {
         log.info("Analyzing: {}", upload.getOriginalFilename());
 
         ElfWrapper elfWrapper = factory.create(upload);
+        FileEntity ref = elfHandler.createEntity(elfWrapper);
 
         List<FileEntity> stored = fileRepo.findAll();
 
-//        if (fileRepo.findBySha256AndFilename(elfWrapper.sha256(), elfWrapper.filename()).isEmpty()) {
-//            fileRepo.save(elfHandler.createEntity(elfWrapper));
-//        }
-
         return stored.stream()
-                .map(other -> comparisonService.compareFiles(elfHandler.createEntity(elfWrapper), other))
+                .map(other -> comparisonService.compareFiles(ref, other))
                 .toList();
     }
 
