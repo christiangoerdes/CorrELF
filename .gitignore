@@ -31,3 +31,6 @@
 /data/evaluation/weight_and_threshold/visualisazion/exports_128_minhash/busybox_scatter_data.csv
 /data/evaluation/weight_and_threshold/weight_finding/backup/
 /data/evaluation/test/all/
+/data/evaluation/train/all/
+/data/evaluation/train/preprocessed/
+/data/evaluation/train/all_raw/
