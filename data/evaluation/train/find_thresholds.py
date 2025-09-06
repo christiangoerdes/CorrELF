@@ -6,11 +6,11 @@ from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 
 REPS = {
-    "rep_string_minhash":    "STRING_MINHASH",
-    "rep_code_regions":      "CODE_REGION_LIST",
-    "rep_program_header":    "PROGRAM_HEADER_VECTOR",
-    "rep_elf_header":        "ELF_HEADER_VECTOR",
-    "rep_section_sizes":     "SECTION_SIZE_VECTOR",
+    "rep_string_minhash":    "String-MinHash",
+    "rep_code_regions":      "Code-Regionen-Liste",
+    "rep_program_header":    "Program-Header-Vektor",
+    "rep_elf_header":        "ELF-Header-Vektor",
+    "rep_section_sizes":     "Sektionsgrößen-Vektor",
 }
 LABEL_COL, FAMILY_COL = "label_same_family", "src_family"
 RECALL_TARGETS = [0.95, 0.99]
@@ -89,10 +89,10 @@ def pick_thresholds(y: np.ndarray, x: np.ndarray):
     return (fpr, tpr, thr), best_j, rec_thrs
 
 
-def plot_rocs(curves, out_png, title, style, dpi):
+def plot_rocs(curves, out_png, style, dpi):
     plt.style.use(style)
     fig, ax = plt.subplots(figsize=(9,6), dpi=dpi)
-    ax.plot([0,1],[0,1], "--", lw=1.0, color="gray", label="Chance", zorder=1)
+    ax.plot([0,1], [0,1], "--", lw=1.0, color="gray", label="Chance", zorder=1)
 
     for label, (fpr, tpr, auc_val, best_j) in sorted(curves.items(), key=lambda kv: kv[1][2], reverse=False):
         ax.plot(fpr, tpr, lw=2.2, alpha=0.9, label=f"{label} (AUC={auc_val:.4f})", zorder=3)
@@ -100,8 +100,10 @@ def plot_rocs(curves, out_png, title, style, dpi):
         ax.annotate("J", (best_j["fpr"], best_j["tpr"]), xytext=(6,-6),
                     textcoords="offset points", fontsize=8, zorder=4)
 
-    ax.set_xlabel("False Positive Rate"); ax.set_ylabel("True Positive Rate (Recall)")
-    ax.set_title(title); ax.legend(loc="lower right"); fig.tight_layout()
+    ax.set_xlabel("FPR")
+    ax.set_ylabel("TPR")
+    ax.legend(loc="lower right")
+    fig.tight_layout()
     fig.savefig(out_png)
 
 
@@ -174,8 +176,7 @@ def main():
         w = csv.DictWriter(f, fieldnames=keys); w.writeheader(); w.writerows(rows)
     print(f"[OK] Summary written: {args.out_csv.resolve()}")
 
-    title = "ROC per representation" + (f" (src_family={args.family})" if args.family else " (global sample)")
-    plot_rocs(curves, args.out_plot, title, style=args.plot_style, dpi=args.plot_dpi)
+    plot_rocs(curves, args.out_plot, style=args.plot_style, dpi=args.plot_dpi)
 
 
 if __name__ == "__main__":
