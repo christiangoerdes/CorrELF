@@ -48,7 +48,7 @@ import static com.goerdes.correlf.utils.ByteUtils.*;
  */
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class AllRepsBatchExportResumeTest extends Setup {
+public class ExportTrainDataTest extends Setup {
 
     private static final Path INPUT_DIR   = Paths.get(System.getProperty("inputDir", "data/dataset/Train"));
     private static final Path OUTPUT_DIR  = Paths.get(System.getProperty("outputDir", "data/evaluation/train/all"));
