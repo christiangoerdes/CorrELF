@@ -36,3 +36,5 @@
 /data/evaluation/train/all_raw/
 /data/evaluation/train/weight/preprocessed/
 /data/evaluation/train/final_threshold/preprocessed/
+/data/evaluation/backup/
+/data/evaluation/backup/visualisazion/
