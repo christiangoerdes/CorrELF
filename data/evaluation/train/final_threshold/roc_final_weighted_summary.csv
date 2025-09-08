@@ -1,0 +1,2 @@
+representation,weights,taus,auc,youden_thr,youden_tpr,youden_fpr,youden_prec,rec95_thr,rec99_thr,rec95_tpr,rec99_tpr,rec95_fpr,rec99_fpr,rec95_prec,rec99_prec,sample_pos,sample_neg,family_filter,mask_policy,neg_pos_ratio,max_rows
+FinalWeighted,"{'SM': 0.617, 'CR': 0.2946, 'PH': 0.0884}","{'SM': 0.146484375, 'CR': 0.3988839387893677, 'PH': 0.8291192054748535}",0.9445039244986689,0.6169999837875366,0.9001339921279625,0.04988803499873053,0.005287568900180995,0.0,0.0,1.0,1.0,1.0,1.0,0.0002945233971195841,0.0002945233971195841,47764,162126109,,finite on all three reps,0.0,0
