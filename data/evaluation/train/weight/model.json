@@ -1,0 +1,39 @@
+{
+  "features": [
+    "PROGRAM_HEADER_VECTOR",
+    "CODE_REGION_LIST",
+    "STRING_MINHASH"
+  ],
+  "weights_sum_to_1": [
+    0.08841241973709892,
+    0.2946060699958094,
+    0.6169815102670917
+  ],
+  "aggregation_used": true,
+  "unique_patterns_present": 8,
+  "train_rows_seen": 80076780,
+  "train_rows_kept": 80076780,
+  "positive_rate": 0.5,
+  "bin_columns": {
+    "PROGRAM_HEADER_VECTOR": "bin_program_header",
+    "CODE_REGION_LIST": "bin_code_regions",
+    "STRING_MINHASH": "bin_string_minhash"
+  },
+  "partition_col": "src_family",
+  "label_col": "label_same_family",
+  "families_filter": [],
+  "lr_details": {
+    "lr_classes_": [
+      0,
+      1
+    ],
+    "lr_n_iter_": 13,
+    "solver": "lbfgs",
+    "penalty": "l2",
+    "C": 1.0,
+    "used_sample_weight": true
+  },
+  "weights_non_negative": true,
+  "weights_sum_constraint": "sum_i w_i = 1",
+  "score_formula": "weighted_score = sum_i (w_i * bin_i)"
+}
