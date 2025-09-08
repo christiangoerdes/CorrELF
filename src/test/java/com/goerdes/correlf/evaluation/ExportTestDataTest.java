@@ -46,8 +46,8 @@ import static com.goerdes.correlf.utils.ByteUtils.*;
 public class ExportTestDataTest extends Setup {
 
     // IO config
-    private static final Path INPUT_DIR  = Paths.get(System.getProperty("inputDir", "data/dataset/Train"));
-    private static final Path OUTPUT_DIR = Paths.get(System.getProperty("outputDir", "data/evaluation/train/all_with_score"));
+    private static final Path INPUT_DIR  = Paths.get(System.getProperty("inputDir", "data/dataset/Test"));
+    private static final Path OUTPUT_DIR = Paths.get(System.getProperty("outputDir", "data/evaluation/test/all"));
     private static final int  PARALLELISM = Math.max(2, Runtime.getRuntime().availableProcessors());
 
     // Thresholds (taus) for binarization
