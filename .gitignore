@@ -38,3 +38,6 @@
 /data/evaluation/train/final_threshold/preprocessed/
 /data/evaluation/backup/
 /data/evaluation/backup/visualisazion/
+/data/evaluation/test/preprocessed/
+/data/evaluation/test/_sample_preprocessed.csv
+/data/evaluation/test/_meta_preprocess.json
