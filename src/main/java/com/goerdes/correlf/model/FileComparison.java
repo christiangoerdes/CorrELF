@@ -17,14 +17,10 @@ import java.util.Map;
 public class FileComparison {
 
     public static final String HIGH = "high";
-    public static final String MEDIUM = "medium";
     public static final String LOW = "low";
 
     /** Minimum score (inclusive) to qualify as a “high” similarity. */
-    private static final double HIGH_THRESHOLD = 0.075;
-
-    /** Maximum score (inclusive) to qualify as a “low” similarity. */
-    private static final double LOW_THRESHOLD  = 0.025;
+    private static final double THRESHOLD = 0.617;
 
     /** Name of the file being compared. */
     @Setter
@@ -37,7 +33,7 @@ public class FileComparison {
     /** Computed similarity score between two files (0.0–1.0). */
     private double similarityScore;
 
-    /** Category corresponding to the similarityScore: HIGH, MEDIUM or LOW. */
+    /** Category corresponding to the similarityScore: HIGH or LOW. */
     private String similarityRating;
 
     /**
@@ -69,7 +65,7 @@ public class FileComparison {
      * @param score a value between 0.0 and 1.0
      */
     private void setSimilarityRating(double score) {
-        this.similarityRating = score >= HIGH_THRESHOLD ? HIGH : score <= LOW_THRESHOLD ? LOW : MEDIUM;
+        this.similarityRating = score >= THRESHOLD ? HIGH : LOW;
     }
 
 }

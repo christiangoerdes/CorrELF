@@ -25,19 +25,19 @@ public class FileComparisonService {
     /**
      * Weights for each RepresentationType
      */
-    private final Map<RepresentationType, Double> fullWeights = new EnumMap<>(RepresentationType.class) {{
-        put(STRING_MINHASH, 1.0);
-        put(CODE_REGION_LIST, 0.0);
-        put(PROGRAM_HEADER_VECTOR, 0.0);
+    private final Map<RepresentationType, Double> weights = new EnumMap<>(RepresentationType.class) {{
+        put(STRING_MINHASH, 0.617);
+        put(CODE_REGION_LIST, 0.2946);
+        put(PROGRAM_HEADER_VECTOR, 0.0884);
     }};
 
     /**
-     * Fallback weights when only core representations are available
+     * Threshold for each RepresentationType
      */
-    private final Map<RepresentationType, Double> fallbackWeights = new EnumMap<>(RepresentationType.class) {{
-        put(STRING_MINHASH, 1.0);
-        put(CODE_REGION_LIST, 0.0);
-        put(PROGRAM_HEADER_VECTOR, 0.0);
+    private final Map<RepresentationType, Double> thresholds = new EnumMap<>(RepresentationType.class) {{
+        put(STRING_MINHASH, 0.617);
+        put(CODE_REGION_LIST, 0.2946);
+        put(PROGRAM_HEADER_VECTOR, 0.0884);
     }};
 
     /**
@@ -59,20 +59,21 @@ public class FileComparisonService {
         }
 
         double stringSim = getStringSim(referenceFile, targetFile);
-        comparisons.put(STRING_MINHASH, stringSim);
+        comparisons.put(STRING_MINHASH, (stringSim >= thresholds.get(STRING_MINHASH) ? 1.0 : 0.0));
 
         List<Coderec.Interval> codeRegionsA = deserializeCodeIntervals(referenceFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData());
         List<Coderec.Interval> codeRegionsB = deserializeCodeIntervals(targetFile.findRepresentationByType(CODE_REGION_LIST).orElseThrow().getData());
 
         if(!codeRegionsA.isEmpty() && !codeRegionsB.isEmpty()) {
-            comparisons.put(CODE_REGION_LIST, computeJaccardScore(codeRegionsA, codeRegionsB));
+            comparisons.put(CODE_REGION_LIST, (computeJaccardScore(codeRegionsA, codeRegionsB) >= thresholds.get(CODE_REGION_LIST) ?
+                    1.0 : 0.0));
         }
 
         double programHeaderSim = getProgramHeaderSim(referenceFile, targetFile);
-        comparisons.put(PROGRAM_HEADER_VECTOR, programHeaderSim);
+        comparisons.put(PROGRAM_HEADER_VECTOR, (programHeaderSim >= thresholds.get(PROGRAM_HEADER_VECTOR) ? 1.0 : 0.0));
 
         double simScore = comparisons.entrySet().stream()
-                .mapToDouble(e -> (bothParsed ? fullWeights : fallbackWeights).getOrDefault(e.getKey(), 0.0) * e.getValue())
+                .mapToDouble(e -> weights.getOrDefault(e.getKey(), 0.0) * e.getValue())
                 .sum();
 
         return new FileComparison() {{
@@ -80,7 +81,7 @@ public class FileComparisonService {
             setSecondFileName(referenceFile.getFilename());
             setComparisonDetails(comparisons);
             setSimilarityScore(simScore);
-            setWeights(fullWeights);
+            setWeights(weights);
         }};
     }
 
