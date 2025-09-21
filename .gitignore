@@ -42,3 +42,5 @@
 /data/evaluation/test/_sample_preprocessed.csv
 /data/evaluation/test/_meta_preprocess.json
 /data/evaluation/test/_fp_by_family_json.csv
+/data/evaluation/test/_fp_overall_json.csv
+/data/evaluation/test/_fp_pairs_json.csv
