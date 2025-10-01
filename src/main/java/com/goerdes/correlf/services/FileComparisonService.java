@@ -35,9 +35,9 @@ public class FileComparisonService {
      * Threshold for each RepresentationType
      */
     private final Map<RepresentationType, Double> thresholds = new EnumMap<>(RepresentationType.class) {{
-        put(STRING_MINHASH, 0.617);
-        put(CODE_REGION_LIST, 0.2946);
-        put(PROGRAM_HEADER_VECTOR, 0.0884);
+        put(STRING_MINHASH, 0.1465);
+        put(CODE_REGION_LIST, 0.3989);
+        put(PROGRAM_HEADER_VECTOR, 0.8291);
     }};
 
     /**

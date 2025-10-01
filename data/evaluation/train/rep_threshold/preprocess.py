@@ -1,20 +1,4 @@
 #!/usr/bin/env python3
-"""
-Preprocess FileComparison JSONs into a tidy Parquet dataset for threshold search.
-
-Input:  directory of JSON files (each is a list of FileComparison objects)
-Output: partitioned Parquet dataset (partitioned by src_family), one row per (src,tgt) pair with 5 rep scores
-
-Schema (columns):
-- src_file, tgt_file (str)
-- src_family, tgt_family (str, derived from name before '___')
-- rep_string_minhash, rep_code_regions, rep_program_header, rep_elf_header, rep_section_sizes (float32)
-- label_same_family (int8)
-
-Dedup rule (no global state needed):
-- Keep only pairs with src_file < tgt_file (lexicographically). Skip src_file == tgt_file.
-"""
-
 import argparse
 import gzip
 import io
@@ -33,8 +17,6 @@ except Exception:
 
 import pyarrow as pa
 import pyarrow.dataset as ds
-
-# ---------- Config ----------
 
 REPS_MAP = {
     "STRING_MINHASH": "rep_string_minhash",
@@ -132,7 +114,6 @@ def write_chunk_arrow(rows: List[Dict], base_dir: Path) -> None:
             arrays[k].append(r.get(k))
     table = pa.table(arrays, schema=SCHEMA)
 
-    # Parquet-Write-Options korrekt erzeugen (keine pa.parquet.* Nutzung!)
     fmt = ds.ParquetFileFormat()
     opts = fmt.make_write_options(compression="snappy")
 

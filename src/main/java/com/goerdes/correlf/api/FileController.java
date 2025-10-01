@@ -25,7 +25,7 @@ public class FileController {
      * @param file the file to analyze
      * @param minScore optional minimum similarity score (inclusive) to include
      * @param maxScore optional maximum similarity score (inclusive) to include
-     * @param rating optional similarity rating ("high", "medium", "low") to include
+     * @param rating optional similarity rating ("high", "low") to include
      * @return a ResponseEntity containing the filtered list of FileComparison objects
      * @throws FileProcessingException if analysis fails
      */

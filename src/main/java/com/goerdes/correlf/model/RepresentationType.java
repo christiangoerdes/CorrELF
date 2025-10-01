@@ -18,8 +18,14 @@ public enum RepresentationType {
      */
     SECTION_SIZE_VECTOR,
 
+    /**
+     * A list of code regions extracted by coderec.
+     */
     CODE_REGION_LIST,
 
+    /**
+     * A fixed‐length numeric vector encoding the key features of an ELF program header.
+     */
     PROGRAM_HEADER_VECTOR,
 
     /**
